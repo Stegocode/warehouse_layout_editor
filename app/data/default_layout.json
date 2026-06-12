@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 2,
+  "meta": { "name": "OUTLET WAREHOUSE" },
+  "settings": { "snap": 1, "grid": 1 },
+  "binTypes": {
+    "STD": { "w": 3, "d": 1, "h": 6, "color": "#6f93c4" },
+    "TALL": { "w": 4.5, "d": 4, "h": 8.5, "color": "#5fb878" },
+    "FLOOR": { "w": 3, "d": 6, "h": 0, "color": "#c4a05f" },
+    "TYPE1": { "w": 4.5, "d": 4, "h": 6, "color": "#8f7fc4" }
+  },
+  "zones": [
+    { "id": "OFFICE", "x": -70, "y": -15, "w": 40, "d": 15, "elev": 0, "clearH": 12, "color": "#6d5f4e" },
+    { "id": "DOCK", "x": -30, "y": -10, "w": 35, "d": 10, "elev": 0, "clearH": 12, "color": "#6b5a66" },
+    { "id": "2", "x": -90, "y": 0, "w": 20, "d": 60, "elev": 0, "clearH": 14, "color": "#5a6b8a" },
+    { "id": "SHOWROOM", "x": -70, "y": 0, "w": 40, "d": 10, "elev": 0, "clearH": 14, "color": "#4f6a63" },
+    { "id": "1", "x": -70, "y": 0, "w": 75, "d": 60, "elev": 0, "clearH": 14, "color": "#55657d" }
+  ],
+  "nodes": [],
+  "edges": [],
+  "racks": [
+    { "id": "ROW-C", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -65, "y": 15 },
+    { "id": "ROW-B", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -64, "y": 15 },
+    { "id": "ROW-A", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -61, "y": 15 },
+    { "id": "ROW-Z", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -60, "y": 15 },
+    { "id": "ROW-5", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -55, "y": 15 },
+    { "id": "ROW-6", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -54, "y": 15 },
+    { "id": "ROW-8", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -45, "y": 13 },
+    { "id": "ROW-7", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -44, "y": 13 }
+  ],
+  "bg": null
+}

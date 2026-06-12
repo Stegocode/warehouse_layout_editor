@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Node / web tooling
+node_modules/
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Build / packaging artifacts
+dist/
+build/
+*.zip
+
+# App runtime — local exports and user data
+app/data/*.local.json
+
+# Local launchers
+run.bat

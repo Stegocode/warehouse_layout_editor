@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Warehouse Layout Editor</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="topbar">
+        <span class="brand">Warehouse Layout Editor</span>
+        <button class="btn tool active" data-tool="select" title="V">Select / Move</button>
+        <button class="btn tool" data-tool="zone" title="Z — drag a rectangle">+ Zone</button>
+        <button class="btn tool" data-tool="rack" title="R — drag along the row direction">+ Rack Row</button>
+        <button class="btn tool" data-tool="node" title="N — click to place">+ Node / Door</button>
+        <button class="btn tool" data-tool="edge" title="E — click node A then node B">+ Path Edge</button>
+        <button class="btn tool danger" data-tool="delete" title="X — click to delete">Delete</button>
+        <div class="sep"></div>
+        <button class="btn" id="view2d">2D Plan</button>
+        <button class="btn" id="view3d">3D Preview</button>
+        <div class="sep"></div>
+        <button class="btn" id="exportBtn">Export JSON</button>
+        <button class="btn" id="importBtn">Import JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display: none" />
+        <div class="spacer"></div>
+        <span id="savedFlag"></span>
+      </div>
+
+      <div id="main">
+        <div id="side">
+          <div id="props"></div>
+
+          <h2>Background tracing image</h2>
+          <div class="btnrow">
+            <button class="btn small" id="bgLoad">Load image</button>
+            <button class="btn small" id="bgCal">Calibrate scale</button>
+            <button class="btn small" id="bgClear">Remove</button>
+          </div>
+          <div class="field">
+            <label>Opacity</label>
+            <input type="range" id="bgOpacity" min="0" max="100" value="35" style="flex: 1" />
+          </div>
+          <div class="hintline" id="bgInfo">
+            No image loaded. Load your floorplan PNG, then Calibrate: click two points a known distance apart.
+          </div>
+
+          <h2>Bin types</h2>
+          <div class="bt-row bt-head">
+            <span>name</span><span>w</span><span>d</span><span>h</span><span></span><span></span>
+          </div>
+          <div id="binTypeList"></div>
+          <div class="btnrow"><button class="btn small" id="addBinType">+ Add type</button></div>
+
+          <h2>Settings</h2>
+          <div class="field">
+            <label>Snap (m)</label><input type="number" id="snapIn" value="0.3" min="0" step="0.1" />
+          </div>
+          <div class="field">
+            <label>Grid (m)</label><input type="number" id="gridIn" value="3" min="0.5" step="0.5" />
+          </div>
+
+          <h2>Keyboard</h2>
+          <div class="hintline">
+            V select &middot; Z zone &middot; R rack &middot; N node &middot; E edge &middot; X delete<br />
+            Esc cancel &middot; Del remove selected<br />
+            Right-drag pan &middot; Scroll zoom
+          </div>
+        </div>
+
+        <div id="stage">
+          <canvas id="c2d"></canvas>
+          <div id="c3dwrap"></div>
+          <div id="status">x: — , y: —</div>
+          <div id="toolHint"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bootError"></div>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

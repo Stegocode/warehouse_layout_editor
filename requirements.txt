@@ -1,0 +1,2 @@
+# Runtime dependencies (needed only for the Postgres persistence layer).
+psycopg[binary]>=3.1

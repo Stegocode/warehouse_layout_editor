@@ -1,0 +1,20 @@
+{
+  "name": "warehouse-layout-editor",
+  "version": "0.1.0",
+  "description": "Browser-based warehouse layout editor (static client).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python -m server.dev_server",
+    "test": "node --test",
+    "lint": "eslint app/js tests/js",
+    "format": "prettier --check \"**/*.{js,mjs,json,css,html,md}\"",
+    "format:fix": "prettier --write \"**/*.{js,mjs,json,css,html,md}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0",
+    "prettier": "^3.3.0"
+  }
+}
