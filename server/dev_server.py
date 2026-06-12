@@ -53,14 +53,16 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     handler = partial(Handler, directory=str(APP_DIR))
-    for port in range(port, port + 10):
+    start_port = port
+    for candidate in range(start_port, start_port + 10):
         try:
-            httpd = socketserver.TCPServer(("", port), handler)
+            httpd = socketserver.TCPServer(("", candidate), handler)
+            port = candidate
             break
         except OSError:
             continue
     else:
-        sys.stderr.write(f"error: could not bind to any port in range {port-10+1}-{port}\n")
+        sys.stderr.write(f"error: could not bind to any port in range {start_port}-{start_port + 9}\n")
         return 1
     url = f"http://localhost:{port}"
     with httpd:
