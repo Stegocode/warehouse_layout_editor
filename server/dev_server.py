@@ -62,7 +62,8 @@ def main(argv: list[str] | None = None) -> int:
         except OSError:
             continue
     else:
-        sys.stderr.write(f"error: could not bind to any port in range {start_port}-{start_port + 9}\n")
+        end_port = start_port + 9
+        sys.stderr.write(f"error: could not bind to any port in range {start_port}-{end_port}\n")
         return 1
     url = f"http://localhost:{port}"
     with httpd:
