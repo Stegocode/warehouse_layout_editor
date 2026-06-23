@@ -482,6 +482,17 @@ function renderProps() {
     document.getElementById('p_del').onclick = deleteSelected;
   }
   if (sel.kind === 'rack') {
+    // Guard: ensure levelHeights exists and is in sync with levels
+    if (!Array.isArray(o.levelHeights) || o.levelHeights.length !== o.levels) {
+      const t = state.binTypes[o.type];
+      const defH = t && t.h > 0 ? t.h : 0.12;
+      o.levelHeights = Array.from({ length: Math.max(o.levels, 1) }, (_, i) => o.levelHeights?.[i] ?? defH);
+    }
+    const lhFields = o.levelHeights
+      .map((h, i) =>
+        f(`Level ${i + 1} ht (m)`, `<input type="number" id="p_lh_${i}" value="${h}" min="0.01" step="0.1">`),
+      )
+      .join('');
     props.innerHTML =
       `<h2>Rack row</h2>` +
       f('ID', `<input type="text" id="p_id" value="${o.id}">`) +
@@ -500,6 +511,7 @@ function renderProps() {
       ) +
       f('Bays', `<input type="number" id="p_bays" value="${o.bays}" min="1" step="1">`) +
       f('Levels', `<input type="number" id="p_lv" value="${o.levels}" min="1" step="1">`) +
+      lhFields +
       f('Start x', `<input type="number" id="p_x" value="${o.x}" step="0.5">`) +
       f('Start y', `<input type="number" id="p_y" value="${o.y}" step="0.5">`) +
       `<div class="hintline">Bins generate as ZONE-ROW-BAY-LEVEL at export.</div>` +
@@ -507,7 +519,38 @@ function renderProps() {
     bindNum('p_x', 'x', o);
     bindNum('p_y', 'y', o);
     bindNum('p_bays', 'bays', o, true);
-    bindNum('p_lv', 'levels', o, true);
+    // Custom levels handler: resize levelHeights to stay in sync with levels count
+    const lvEl = document.getElementById('p_lv');
+    if (lvEl) {
+      lvEl.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10);
+        if (Number.isNaN(v) || v < 1) return;
+        const oldLen = o.levelHeights.length;
+        if (v > oldLen) {
+          const lastH = o.levelHeights[oldLen - 1] ?? (state.binTypes[o.type]?.h || 0.12);
+          for (let i = oldLen; i < v; i++) o.levelHeights.push(lastH);
+        } else {
+          o.levelHeights.length = v;
+        }
+        o.levels = v;
+        save();
+        renderProps();
+        draw();
+      });
+    }
+    o.levelHeights.forEach((_, i) => {
+      const lhEl = document.getElementById(`p_lh_${i}`);
+      if (lhEl) {
+        lhEl.addEventListener('input', (e) => {
+          const v = parseFloat(e.target.value);
+          if (!Number.isNaN(v) && v > 0) {
+            o.levelHeights[i] = v;
+            save();
+            draw();
+          }
+        });
+      }
+    });
     bind('p_id', (v) => {
       o.id = v;
     });
@@ -795,12 +838,14 @@ function wirePointer() {
       const type = Object.keys(state.binTypes)[0] || 'STD';
       const bw = state.binTypes[type]?.w || 4.5;
       const bays = Math.max(1, Math.floor(len / bw));
+      const defaultLevelH = state.binTypes[type]?.h > 0 ? state.binTypes[type].h : 0.12;
       const r = {
         id: nextRackId(),
         type,
         dir,
         bays,
         levels: 3,
+        levelHeights: [defaultLevelH, defaultLevelH, defaultLevelH],
         x: dir === 'E' ? Math.min(x0, x1) : x0,
         y: dir === 'E' ? y0 : Math.min(y0, y1),
       };

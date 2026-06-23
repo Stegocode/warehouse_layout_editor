@@ -26,6 +26,24 @@ const MIGRATIONS = {
     }
     return next;
   },
+
+  // 2 -> 3: per-level rack heights (levelHeights).
+  // v2 assumed every level shared the bin type's `h`. v3 makes heights explicit
+  // so each level can differ. The upgrade seeds levelHeights from the bin type's h
+  // so the 3D view renders identically after migration.
+  2: (layout) => {
+    const binTypes = layout.binTypes || {};
+    const racks = (layout.racks || []).map((r) => {
+      if (r.levelHeights) return { ...r };
+      const t = binTypes[r.type];
+      const uniformH = t && t.h > 0 ? t.h : 0.12;
+      return {
+        ...r,
+        levelHeights: Array.from({ length: Math.max(r.levels, 1) }, () => uniformH),
+      };
+    });
+    return { ...layout, schemaVersion: 3, racks };
+  },
 };
 
 // A layout with no explicit schemaVersion predates the field; treat it as v1.

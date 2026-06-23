@@ -22,6 +22,7 @@ Thumbs.db
 dist/
 build/
 *.zip
+ROADMAP.md
 
 # App runtime — local exports and user data
 app/data/*.local.json

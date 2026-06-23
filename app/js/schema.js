@@ -6,7 +6,7 @@
 // lightweight structural check used by import and by the test suite; it is not a
 // full JSON-Schema validator, just enough to catch obviously broken files.
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const NODE_KINDS = ['door', 'ramp', 'junction', 'dock', 'staging', 'charge'];
 export const RACK_DIRS = ['E', 'N'];
@@ -63,6 +63,16 @@ export function validateLayout(layout) {
     if (!RACK_DIRS.includes(r.dir)) push(`racks[${i}].dir must be one of ${RACK_DIRS.join(', ')}`);
     if (!Number.isInteger(r.bays) || r.bays < 1) push(`racks[${i}].bays must be a positive integer`);
     if (!Number.isInteger(r.levels) || r.levels < 1) push(`racks[${i}].levels must be a positive integer`);
+    if (!Array.isArray(r.levelHeights)) {
+      push(`racks[${i}].levelHeights must be an array`);
+    } else {
+      if (r.levelHeights.length !== r.levels) {
+        push(`racks[${i}].levelHeights.length (${r.levelHeights.length}) must equal levels (${r.levels})`);
+      }
+      if (!r.levelHeights.every((h) => isFiniteNumber(h) && h > 0)) {
+        push(`racks[${i}].levelHeights must contain only positive numbers`);
+      }
+    }
     if (!binTypeNames.includes(r.type)) push(`racks[${i}].type "${r.type}" is not a defined bin type`);
   });
 

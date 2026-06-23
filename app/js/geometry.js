@@ -55,6 +55,15 @@ export function expandBins(state) {
   return bins;
 }
 
+// Returns the cumulative z base (bottom edge) of level `levelIndex` given an
+// array of per-level heights. Level 0 starts at z=0; each subsequent level
+// starts at the sum of all preceding level heights.
+export function levelBaseZ(levelHeights, levelIndex) {
+  let z = 0;
+  for (let i = 0; i < levelIndex; i++) z += levelHeights[i];
+  return z;
+}
+
 // Produce the export payload: a deep copy of the editor state enriched with
 // derived fields (node zone, edge distance, expanded bins) that are convenient
 // for downstream consumers but are not part of the editable model.
