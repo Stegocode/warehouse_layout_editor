@@ -47,6 +47,9 @@ export function createPreview3D(wrap) {
     renderer.setSize(wrap.clientWidth, wrap.clientHeight);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     wrap.appendChild(renderer.domElement);
+    // Prevents macOS/Chrome from swallowing pointer drag events before they
+    // reach the canvas — wheel-zoom still worked but rotate/pan did not.
+    renderer.domElement.style.touchAction = 'none';
 
     scene.add(new THREE.HemisphereLight(0xbfd0e0, 0x20262e, 0.85));
     const sun = new THREE.DirectionalLight(0xfff2dd, 0.7);
