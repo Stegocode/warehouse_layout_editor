@@ -4,7 +4,7 @@
 // zoom). It is rebuilt from a layout snapshot each time the user opens 3D.
 
 import * as THREE from '../vendor/three.module.js';
-import { zoneOf } from './geometry.js';
+import { zoneOf, levelBaseZ } from './geometry.js';
 
 export function createPreview3D(wrap) {
   let ctx = null; // { renderer, raf }
@@ -142,11 +142,15 @@ export function createPreview3D(wrap) {
       for (let b = 0; b < r.bays; b++) {
         const bx = r.x + (r.dir === 'E' ? b * t.w + t.w / 2 : t.d / 2);
         const by = r.y + (r.dir === 'N' ? b * t.w + t.w / 2 : t.d / 2);
-        for (let l = 0; l < Math.max(r.levels, 1); l++) {
-          const h = t.h > 0 ? t.h : 0.12;
+        const levelHeights =
+          Array.isArray(r.levelHeights) && r.levelHeights.length > 0
+            ? r.levelHeights
+            : Array.from({ length: Math.max(r.levels, 1) }, () => (t.h > 0 ? t.h : 0.12));
+        for (let l = 0; l < levelHeights.length; l++) {
+          const lh = levelHeights[l] > 0 ? levelHeights[l] : 0.12;
           const geo = new THREE.BoxGeometry(
             (r.dir === 'E' ? t.w : t.d) - 0.09,
-            h - (t.h > 0 ? 0.11 : 0),
+            Math.max(lh - 0.11, 0.01),
             (r.dir === 'E' ? t.d : t.w) - 0.09,
           );
           const m = new THREE.Mesh(
@@ -157,7 +161,7 @@ export function createPreview3D(wrap) {
               opacity: 0.55,
             }),
           );
-          m.position.copy(W(bx, by, elev + h / 2 + l * (t.h || 0)));
+          m.position.copy(W(bx, by, elev + levelBaseZ(levelHeights, l) + lh / 2));
           scene.add(m);
           const eg = new THREE.LineSegments(
             new THREE.EdgesGeometry(geo),

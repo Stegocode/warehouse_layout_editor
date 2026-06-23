@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "meta": { "name": "OUTLET WAREHOUSE" },
   "settings": { "snap": 1, "grid": 1 },
   "binTypes": {
@@ -18,14 +18,14 @@
   "nodes": [],
   "edges": [],
   "racks": [
-    { "id": "ROW-C", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -65, "y": 15 },
-    { "id": "ROW-B", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -64, "y": 15 },
-    { "id": "ROW-A", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -61, "y": 15 },
-    { "id": "ROW-Z", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -60, "y": 15 },
-    { "id": "ROW-5", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -55, "y": 15 },
-    { "id": "ROW-6", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -54, "y": 15 },
-    { "id": "ROW-8", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -45, "y": 13 },
-    { "id": "ROW-7", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "x": -44, "y": 13 }
+    { "id": "ROW-C", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "levelHeights": [6, 6, 6], "x": -65, "y": 15 },
+    { "id": "ROW-B", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "levelHeights": [6, 6, 6], "x": -64, "y": 15 },
+    { "id": "ROW-A", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "levelHeights": [6, 6, 6], "x": -61, "y": 15 },
+    { "id": "ROW-Z", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "levelHeights": [6, 6, 6], "x": -60, "y": 15 },
+    { "id": "ROW-5", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "levelHeights": [6, 6, 6], "x": -55, "y": 15 },
+    { "id": "ROW-6", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "levelHeights": [6, 6, 6], "x": -54, "y": 15 },
+    { "id": "ROW-8", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "levelHeights": [6, 6, 6], "x": -45, "y": 13 },
+    { "id": "ROW-7", "type": "STD", "dir": "N", "bays": 13, "levels": 3, "levelHeights": [6, 6, 6], "x": -44, "y": 13 }
   ],
   "bg": null
 }

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from numbers import Real
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 NODE_KINDS = {"door", "ramp", "junction", "dock", "staging", "charge"}
 RACK_DIRS = {"E", "N"}
 
@@ -75,6 +75,17 @@ def validate_layout(layout) -> list[str]:
             errors.append(f"racks[{i}].bays must be a positive integer")
         if not isinstance(r.get("levels"), int) or r.get("levels", 0) < 1:
             errors.append(f"racks[{i}].levels must be a positive integer")
+        level_heights = r.get("levelHeights")
+        if not isinstance(level_heights, list):
+            errors.append(f"racks[{i}].levelHeights must be an array")
+        else:
+            if len(level_heights) != r.get("levels", 0):
+                errors.append(
+                    f"racks[{i}].levelHeights.length ({len(level_heights)}) "
+                    f"must equal levels ({r.get('levels')})"
+                )
+            if not all(_is_number(h) and h > 0 for h in level_heights):
+                errors.append(f"racks[{i}].levelHeights must contain only positive numbers")
         if r.get("type") not in bin_type_names:
             errors.append(f"racks[{i}].type {r.get('type')!r} is not a defined bin type")
 
