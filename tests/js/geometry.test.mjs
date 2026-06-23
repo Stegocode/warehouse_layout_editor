@@ -44,9 +44,12 @@ test('expandBins produces bays x levels bins per run', () => {
   assert.equal(expandBins(defaultLayout).length, expected);
 });
 
-test('expanded bin labels follow ZONE-ROW-BAY-LEVEL', () => {
+test('expanded bin labels follow ROW-BAY-LEVEL (no zone prefix)', () => {
   const bins = expandBins(defaultLayout);
-  assert.match(bins[0].bin_label, /^[A-Za-z0-9?]+-[A-Za-z0-9]+-\d{2}-\d+$/);
+  // Format: rowToken-paddedBay-level, e.g. "C-01-1"
+  assert.match(bins[0].bin_label, /^[A-Za-z0-9]+-\d+-\d+$/);
+  // bin_label and whse_location must be identical
+  assert.equal(bins[0].bin_label, bins[0].whse_location);
 });
 
 test('enrichForExport adds zone, distance and bins without mutating state', () => {

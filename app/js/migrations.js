@@ -44,6 +44,30 @@ const MIGRATIONS = {
     });
     return { ...layout, schemaVersion: 3, racks };
   },
+
+  // 3 -> 4: bin naming system (three-layer model).
+  // v3 had no naming config and derived bin labels as ZONE-ROW-BAY-LEVEL. v4 adds:
+  //   - naming: { separator, bayPad } — shared label format config
+  //   - binOverrides: {} — per-bin custom whse_location strings, keyed by
+  //       "rackId|bayIndex|level" so overrides survive rack renaming
+  //   - per-rack: rowToken (literal label token), bayStart, bayReverse
+  // rowToken is seeded from the existing id so the non-zone parts of generated
+  // labels are identical to v3. The ZONE segment is intentionally dropped:
+  // whse_location is ROW-BAY-LEVEL per the WMS join-key format.
+  3: (layout) => {
+    const naming = layout.naming ?? { separator: '-', bayPad: 2 };
+    const binOverrides = layout.binOverrides ?? {};
+    const racks = (layout.racks || []).map((r) => {
+      const rowToken = r.rowToken ?? r.id.replace(/^[^-]+-/, '');
+      return {
+        ...r,
+        rowToken,
+        bayStart: r.bayStart ?? 1,
+        bayReverse: r.bayReverse ?? false,
+      };
+    });
+    return { ...layout, schemaVersion: 4, naming, binOverrides, racks };
+  },
 };
 
 // A layout with no explicit schemaVersion predates the field; treat it as v1.

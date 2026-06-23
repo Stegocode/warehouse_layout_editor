@@ -2,7 +2,7 @@
 // toolset, and the side-panel UI. Pure layout math lives in geometry.js;
 // persistence lives in store.js; the 3D view lives in preview3d.js.
 
-import { ptSegDist, enrichForExport } from './geometry.js';
+import { ptSegDist, enrichForExport, expandBins } from './geometry.js';
 import { saveLayout, fetchDefaultLayout } from './store.js';
 import { createPreview3D } from './preview3d.js';
 
@@ -482,17 +482,36 @@ function renderProps() {
     document.getElementById('p_del').onclick = deleteSelected;
   }
   if (sel.kind === 'rack') {
-    // Guard: ensure levelHeights exists and is in sync with levels
+    // Guards: ensure v4 fields exist (in-flight data may be mid-migration)
     if (!Array.isArray(o.levelHeights) || o.levelHeights.length !== o.levels) {
       const t = state.binTypes[o.type];
       const defH = t && t.h > 0 ? t.h : 0.12;
       o.levelHeights = Array.from({ length: Math.max(o.levels, 1) }, (_, i) => o.levelHeights?.[i] ?? defH);
     }
+    if (!o.rowToken) o.rowToken = o.id.replace(/^[^-]+-/, '');
+    if (!Number.isInteger(o.bayStart) || o.bayStart < 1) o.bayStart = 1;
+    if (typeof o.bayReverse !== 'boolean') o.bayReverse = false;
+    if (!state.binOverrides || typeof state.binOverrides !== 'object') state.binOverrides = {};
+
     const lhFields = o.levelHeights
       .map((h, i) =>
         f(`Level ${i + 1} ht (m)`, `<input type="number" id="p_lh_${i}" value="${h}" min="0.01" step="0.1">`),
       )
       .join('');
+
+    // Bin label overrides — collapsible, rendered via <details>
+    const rackBins = expandBins(state).filter((b) => b.row === o.id);
+    const binovrRows = rackBins
+      .map((b) => {
+        const cur = state.binOverrides[b.override_key] ?? '';
+        return `<div class="binovr-row">
+          <span class="binovr-gen">${b.override_key in state.binOverrides ? '✎' : ''} ${b.bin_label}</span>
+          <input type="text" class="binovr-inp" data-key="${b.override_key}"
+            value="${cur}" placeholder="${b.bin_label}">
+        </div>`;
+      })
+      .join('');
+
     props.innerHTML =
       `<h2>Rack row</h2>` +
       f('ID', `<input type="text" id="p_id" value="${o.id}">`) +
@@ -512,13 +531,21 @@ function renderProps() {
       f('Bays', `<input type="number" id="p_bays" value="${o.bays}" min="1" step="1">`) +
       f('Levels', `<input type="number" id="p_lv" value="${o.levels}" min="1" step="1">`) +
       lhFields +
+      f('Row token', `<input type="text" id="p_rt" value="${o.rowToken}">`) +
+      f('Bay start', `<input type="number" id="p_bs" value="${o.bayStart}" min="1" step="1">`) +
+      f('Bay reverse', `<input type="checkbox" id="p_br" ${o.bayReverse ? 'checked' : ''}>`) +
       f('Start x', `<input type="number" id="p_x" value="${o.x}" step="0.5">`) +
       f('Start y', `<input type="number" id="p_y" value="${o.y}" step="0.5">`) +
-      `<div class="hintline">Bins generate as ZONE-ROW-BAY-LEVEL at export.</div>` +
+      `<div class="hintline">Bins generate as ROW-BAY-LEVEL at export (whse_location).</div>` +
+      `<details><summary>Edit bin labels (${rackBins.length} bins)</summary>` +
+      `<div class="binovr-scroll" id="p_binovr">${binovrRows}</div></details>` +
       `<div class="btnrow"><button class="btn small" id="p_del">Delete row</button></div>`;
+
     bindNum('p_x', 'x', o);
     bindNum('p_y', 'y', o);
     bindNum('p_bays', 'bays', o, true);
+    bindNum('p_bs', 'bayStart', o, true);
+
     // Custom levels handler: resize levelHeights to stay in sync with levels count
     const lvEl = document.getElementById('p_lv');
     if (lvEl) {
@@ -551,8 +578,28 @@ function renderProps() {
         });
       }
     });
+
+    // Bin label overrides — event delegation on the scroll container
+    const binovrEl = document.getElementById('p_binovr');
+    if (binovrEl) {
+      binovrEl.addEventListener('input', (e) => {
+        const key = e.target.dataset.key;
+        if (!key) return;
+        const v = e.target.value.trim();
+        if (v) {
+          state.binOverrides[key] = v;
+        } else {
+          delete state.binOverrides[key];
+        }
+        save();
+      });
+    }
+
     bind('p_id', (v) => {
       o.id = v;
+    });
+    bind('p_rt', (v) => {
+      o.rowToken = v;
     });
     bind('p_type', (v) => {
       o.type = v;
@@ -560,6 +607,14 @@ function renderProps() {
     bind('p_dir', (v) => {
       o.dir = v;
     });
+    const brEl = document.getElementById('p_br');
+    if (brEl) {
+      brEl.addEventListener('change', (e) => {
+        o.bayReverse = e.target.checked;
+        save();
+        draw();
+      });
+    }
     document.getElementById('p_del').onclick = deleteSelected;
   }
 }
@@ -642,7 +697,7 @@ async function importLayoutFile(file) {
     alert('Could not parse that file: ' + err.message);
     return;
   }
-  delete data.bins; // derived — regenerate on next export
+  delete data.bins; // derived — regenerate on next export; binOverrides is NOT deleted (user data)
   try {
     const { migrate } = await import('./migrations.js');
     data = migrate(data);
@@ -838,14 +893,18 @@ function wirePointer() {
       const type = Object.keys(state.binTypes)[0] || 'STD';
       const bw = state.binTypes[type]?.w || 4.5;
       const bays = Math.max(1, Math.floor(len / bw));
+      const rackId = nextRackId();
       const defaultLevelH = state.binTypes[type]?.h > 0 ? state.binTypes[type].h : 0.12;
       const r = {
-        id: nextRackId(),
+        id: rackId,
         type,
         dir,
         bays,
         levels: 3,
         levelHeights: [defaultLevelH, defaultLevelH, defaultLevelH],
+        rowToken: rackId.replace(/^[^-]+-/, ''),
+        bayStart: 1,
+        bayReverse: false,
         x: dir === 'E' ? Math.min(x0, x1) : x0,
         y: dir === 'E' ? y0 : Math.min(y0, y1),
       };

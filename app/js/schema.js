@@ -6,7 +6,7 @@
 // lightweight structural check used by import and by the test suite; it is not a
 // full JSON-Schema validator, just enough to catch obviously broken files.
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const NODE_KINDS = ['door', 'ramp', 'junction', 'dock', 'staging', 'charge'];
 export const RACK_DIRS = ['E', 'N'];
@@ -35,6 +35,25 @@ export function validateLayout(layout) {
   }
   if (!layout.binTypes || typeof layout.binTypes !== 'object') {
     push('binTypes must be an object');
+  }
+
+  // naming config
+  const naming = layout.naming;
+  if (!naming || typeof naming !== 'object' || Array.isArray(naming)) {
+    push('naming must be an object');
+  } else {
+    if (typeof naming.separator !== 'string') push('naming.separator must be a string');
+    if (!Number.isInteger(naming.bayPad) || naming.bayPad < 1)
+      push('naming.bayPad must be a positive integer');
+  }
+
+  // binOverrides
+  if (
+    layout.binOverrides == null ||
+    typeof layout.binOverrides !== 'object' ||
+    Array.isArray(layout.binOverrides)
+  ) {
+    push('binOverrides must be an object');
   }
 
   (layout.zones || []).forEach((z, i) => {
@@ -73,6 +92,11 @@ export function validateLayout(layout) {
         push(`racks[${i}].levelHeights must contain only positive numbers`);
       }
     }
+    if (typeof r.rowToken !== 'string' || r.rowToken.length === 0)
+      push(`racks[${i}].rowToken must be a non-empty string`);
+    if (!Number.isInteger(r.bayStart) || r.bayStart < 1)
+      push(`racks[${i}].bayStart must be a positive integer`);
+    if (typeof r.bayReverse !== 'boolean') push(`racks[${i}].bayReverse must be a boolean`);
     if (!binTypeNames.includes(r.type)) push(`racks[${i}].type "${r.type}" is not a defined bin type`);
   });
 
