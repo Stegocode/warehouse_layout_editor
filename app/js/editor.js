@@ -2,7 +2,7 @@
 // toolset, and the side-panel UI. Pure layout math lives in geometry.js;
 // persistence lives in store.js; the 3D view lives in preview3d.js.
 
-import { ptSegDist, expandBins } from './geometry.js';
+import { ptSegDist, expandBins, bayOf, resolveBayLabel } from './geometry.js';
 import { saveLayout, fetchDefaultLayout } from './store.js';
 import { createPreview3D } from './preview3d.js';
 import { migrate } from './migrations.js';
@@ -34,6 +34,7 @@ let calClicks = [];
 let mode3d = false;
 let bgImage = null;
 let saveTimer = null;
+let selBay = null; // { rack, bayIndex } — which bay is highlighted for the readout
 
 // ---------- coordinate transforms ----------
 const sx = (x) => (x - view.cx) * view.zoom * devicePixelRatio + cv.width / 2;
@@ -222,6 +223,17 @@ function draw() {
       ctx.lineWidth = seld ? 2 : 1;
       ctx.fillRect(sx(bx), sy(by + bd), bw * z, bd * z);
       ctx.strokeRect(sx(bx), sy(by + bd), bw * z, bd * z);
+      if (selBay && selBay.rack === r && selBay.bayIndex === b) {
+        ctx.strokeStyle = '#ffe580';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(sx(bx) + 1, sy(by + bd) + 1, bw * z - 2, bd * z - 2);
+        if (z >= 3) {
+          ctx.fillStyle = '#ffe580';
+          ctx.font = `700 ${Math.max(9, z * 2)}px Consolas`;
+          ctx.textAlign = 'left';
+          ctx.fillText(resolveBayLabel(state, r, b), sx(bx) + 4, sy(by + bd) + Math.max(12, z * 2.5));
+        }
+      }
     }
     if (labelState.get()) {
       ctx.fillStyle = seld ? '#5fa8e8' : '#cfd8e2';
@@ -305,6 +317,7 @@ function setTool(t) {
   tool = t;
   pendingEdgeNode = null;
   dragDraw = null;
+  selBay = null;
   calMode = false;
   calClicks = [];
   document.querySelectorAll('.tool').forEach((b) => b.classList.toggle('active', b.dataset.tool === t));
@@ -522,8 +535,14 @@ function renderProps() {
       })
       .join('');
 
+    const bayReadout =
+      selBay && selBay.rack === o
+        ? `<div class="hintline bay-readout">Bay: <strong>${resolveBayLabel(state, o, selBay.bayIndex)}</strong>&ensp;&middot;&ensp;${o.levels} level${o.levels !== 1 ? 's' : ''}&ensp;&middot;&ensp;click another bay to update</div>`
+        : '';
+
     props.innerHTML =
       `<h2>Rack row</h2>` +
+      bayReadout +
       f('ID', `<input type="text" id="p_id" value="${o.id}">`) +
       f(
         'Bin type',
@@ -791,6 +810,12 @@ function wirePointer() {
     if (tool === 'select') {
       const h = hitTest(x, y);
       sel = h;
+      if (h && h.kind === 'rack') {
+        const bi = bayOf(h.obj, state.binTypes, x, y);
+        selBay = bi !== null ? { rack: h.obj, bayIndex: bi } : null;
+      } else {
+        selBay = null;
+      }
       if (h && (h.kind === 'zone' || h.kind === 'rack' || h.kind === 'node')) {
         dragMove = { ox: x - h.obj.x, oy: y - h.obj.y };
       }

@@ -85,6 +85,35 @@ export function levelBaseZ(levelHeights, levelIndex) {
   return z;
 }
 
+// Return the 0-based bay index that world point (x, y) falls within for the
+// given rack, or null if the point is outside the rack's footprint.
+export function bayOf(rack, binTypes, x, y) {
+  const t = binTypes[rack.type];
+  if (!t) return null;
+  if (rack.dir === 'E') {
+    if (x < rack.x || x > rack.x + rack.bays * t.w || y < rack.y || y > rack.y + t.d) return null;
+    const b = Math.floor((x - rack.x) / t.w);
+    return b >= 0 && b < rack.bays ? b : null;
+  }
+  if (x < rack.x || x > rack.x + t.d || y < rack.y || y > rack.y + rack.bays * t.w) return null;
+  const b = Math.floor((y - rack.y) / t.w);
+  return b >= 0 && b < rack.bays ? b : null;
+}
+
+// Resolve the row-bay label for a single bay (no level suffix). Uses the same
+// naming fields as expandBins so the result always matches the prefix of the
+// whse_location that expandBins emits for level 1 of this bay (no overrides).
+export function resolveBayLabel(state, rack, bayIndex) {
+  const naming = state.naming ?? { separator: '-', bayPad: 2 };
+  const sep = typeof naming.separator === 'string' ? naming.separator : '-';
+  const bayPad = Number.isInteger(naming.bayPad) && naming.bayPad >= 1 ? naming.bayPad : 2;
+  const rowToken = rack.rowToken ?? rack.id.replace(/^[^-]+-/, '');
+  const bayStart = Number.isInteger(rack.bayStart) && rack.bayStart >= 1 ? rack.bayStart : 1;
+  const bayReverse = rack.bayReverse === true;
+  const bayNum = bayReverse ? bayStart + rack.bays - 1 - bayIndex : bayStart + bayIndex;
+  return `${rowToken}${sep}${String(bayNum).padStart(bayPad, '0')}`;
+}
+
 // Produce the export payload: a deep copy of the editor state enriched with
 // derived fields (node zone, edge distance, expanded bins) that are convenient
 // for downstream consumers but are not part of the editable model.
