@@ -108,7 +108,16 @@ test('shipped default_layout.json (v3) passes validation as-is', () => {
 
 // ── validateLayout for v3 ─────────────────────────────────────────────────
 
-const validV3Rack = { id: 'ROW-A', type: 'STD', dir: 'N', bays: 5, levels: 3, levelHeights: [6, 7, 8], x: 0, y: 0 };
+const validV3Rack = {
+  id: 'ROW-A',
+  type: 'STD',
+  dir: 'N',
+  bays: 5,
+  levels: 3,
+  levelHeights: [6, 7, 8],
+  x: 0,
+  y: 0,
+};
 
 const validV3 = {
   schemaVersion: 3,

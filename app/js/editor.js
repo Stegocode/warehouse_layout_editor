@@ -489,7 +489,9 @@ function renderProps() {
       o.levelHeights = Array.from({ length: Math.max(o.levels, 1) }, (_, i) => o.levelHeights?.[i] ?? defH);
     }
     const lhFields = o.levelHeights
-      .map((h, i) => f(`Level ${i + 1} ht (m)`, `<input type="number" id="p_lh_${i}" value="${h}" min="0.01" step="0.1">`))
+      .map((h, i) =>
+        f(`Level ${i + 1} ht (m)`, `<input type="number" id="p_lh_${i}" value="${h}" min="0.01" step="0.1">`),
+      )
       .join('');
     props.innerHTML =
       `<h2>Rack row</h2>` +
