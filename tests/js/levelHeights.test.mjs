@@ -56,7 +56,7 @@ const v2WithFloor = {
 
 test('2→3 migration produces levelHeights with length === levels', () => {
   const up = migrate(v2WithFloor);
-  assert.equal(up.schemaVersion, 3);
+  assert.equal(up.schemaVersion, SCHEMA_VERSION);
   assert.equal(up.racks[0].levelHeights.length, 3);
   assert.equal(up.racks[1].levelHeights.length, 1);
 });
@@ -88,10 +88,10 @@ test('2→3 migration skips racks that already have levelHeights', () => {
   assert.deepEqual(up.racks[0].levelHeights, [4, 5, 6]);
 });
 
-test('real default_layout.json data (v2 snapshot) migrates to v3 identically', () => {
+test('real default_layout.json data (v2 snapshot) migrates to current schema version', () => {
   const up = migrate(defaultV2);
-  assert.equal(up.schemaVersion, 3);
-  // Each rack seeded with 3 levels of h=6 (STD bin type)
+  assert.equal(up.schemaVersion, SCHEMA_VERSION);
+  // Each rack seeded with 3 levels of h=6 (STD bin type) by the 2→3 step
   up.racks.forEach((r) => {
     assert.equal(r.levelHeights.length, r.levels);
     assert.ok(r.levelHeights.every((h) => h === 6));
@@ -115,14 +115,19 @@ const validV3Rack = {
   bays: 5,
   levels: 3,
   levelHeights: [6, 7, 8],
+  rowToken: 'A',
+  bayStart: 1,
+  bayReverse: false,
   x: 0,
   y: 0,
 };
 
 const validV3 = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   meta: { name: 'TEST' },
   settings: { snap: 1, grid: 1 },
+  naming: { separator: '-', bayPad: 2 },
+  binOverrides: {},
   binTypes: { STD: { w: 3, d: 1, h: 6, color: '#6f93c4' } },
   zones: [],
   nodes: [],

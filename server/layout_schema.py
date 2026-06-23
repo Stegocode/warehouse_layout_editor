@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from numbers import Real
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 NODE_KINDS = {"door", "ramp", "junction", "dock", "staging", "charge"}
 RACK_DIRS = {"E", "N"}
 
@@ -40,6 +40,22 @@ def validate_layout(layout) -> list[str]:
             errors.append(f"{key} must be an array")
     if not isinstance(layout.get("binTypes"), dict):
         errors.append("binTypes must be an object")
+
+    # naming config
+    naming = layout.get("naming")
+    if not isinstance(naming, dict):
+        errors.append("naming must be an object")
+    else:
+        if not isinstance(naming.get("separator"), str):
+            errors.append("naming.separator must be a string")
+        bay_pad = naming.get("bayPad")
+        if not isinstance(bay_pad, int) or isinstance(bay_pad, bool) or bay_pad < 1:
+            errors.append("naming.bayPad must be a positive integer")
+
+    # binOverrides
+    bin_overrides = layout.get("binOverrides")
+    if not isinstance(bin_overrides, dict):
+        errors.append("binOverrides must be an object")
 
     for i, z in enumerate(layout.get("zones") or []):
         for k in ("x", "y", "w", "d", "elev", "clearH"):
@@ -86,6 +102,14 @@ def validate_layout(layout) -> list[str]:
                 )
             if not all(_is_number(h) and h > 0 for h in level_heights):
                 errors.append(f"racks[{i}].levelHeights must contain only positive numbers")
+        row_token = r.get("rowToken")
+        if not isinstance(row_token, str) or len(row_token) == 0:
+            errors.append(f"racks[{i}].rowToken must be a non-empty string")
+        bay_start = r.get("bayStart")
+        if not isinstance(bay_start, int) or isinstance(bay_start, bool) or bay_start < 1:
+            errors.append(f"racks[{i}].bayStart must be a positive integer")
+        if not isinstance(r.get("bayReverse"), bool):
+            errors.append(f"racks[{i}].bayReverse must be a boolean")
         if r.get("type") not in bin_type_names:
             errors.append(f"racks[{i}].type {r.get('type')!r} is not a defined bin type")
 

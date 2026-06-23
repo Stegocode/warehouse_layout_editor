@@ -24,9 +24,17 @@ export function edgeLength(nodes, edge) {
   return a && b ? +Math.hypot(a.x - b.x, a.y - b.y).toFixed(1) : null;
 }
 
-// Expand rack runs into individual bins with labels and world coordinates.
-// This is the data a downstream seed script or WMS import would consume.
+// Expand rack runs into individual bins with whse_location labels and world
+// coordinates. Three naming layers apply in priority order:
+//   1. binOverrides["rackId|bayIndex|level"] — wins over everything
+//   2. Per-rack fields: rowToken, bayStart, bayReverse
+//   3. Top-level naming: { separator, bayPad }
+// z is computed cumulatively from r.levelHeights via levelBaseZ().
 export function expandBins(state) {
+  const naming = state.naming ?? { separator: '-', bayPad: 2 };
+  const overrides = state.binOverrides ?? {};
+  const sep = typeof naming.separator === 'string' ? naming.separator : '-';
+  const bayPad = Number.isInteger(naming.bayPad) && naming.bayPad >= 1 ? naming.bayPad : 2;
   const bins = [];
   for (const r of state.racks) {
     const t = state.binTypes[r.type];
@@ -34,20 +42,33 @@ export function expandBins(state) {
     const zone = zoneOf(state.zones, r.x, r.y);
     const zid = zone ? zone.id : '?';
     const zoneElev = zone ? zone.elev : 0;
+    const rowToken = r.rowToken ?? r.id.replace(/^[^-]+-/, '');
+    const bayStart = Number.isInteger(r.bayStart) && r.bayStart >= 1 ? r.bayStart : 1;
+    const bayReverse = r.bayReverse === true;
+    const levelHeights = Array.isArray(r.levelHeights)
+      ? r.levelHeights
+      : Array.from({ length: Math.max(r.levels, 1) }, () => t.h || 0.12);
     for (let b = 0; b < r.bays; b++) {
       const cx = r.x + (r.dir === 'E' ? b * t.w + t.w / 2 : t.d / 2);
       const cy = r.y + (r.dir === 'N' ? b * t.w + t.w / 2 : t.d / 2);
+      const bayNum = bayReverse ? bayStart + r.bays - 1 - b : bayStart + b;
+      const bayStr = String(bayNum).padStart(bayPad, '0');
       for (let l = 1; l <= Math.max(r.levels, 1); l++) {
+        const overrideKey = `${r.id}|${b}|${l}`;
+        const generated = `${rowToken}${sep}${bayStr}${sep}${l}`;
+        const whse_location = overrides[overrideKey] ?? generated;
         bins.push({
-          bin_label: `${zid}-${r.id.replace(/^.*?-/, '')}-${String(b + 1).padStart(2, '0')}-${l}`,
+          bin_label: whse_location,
+          whse_location,
+          override_key: overrideKey,
           zone: zid,
           row: r.id,
-          bay: b + 1,
+          bay: bayNum,
           level: l,
           bin_type: r.type,
           x: +cx.toFixed(1),
           y: +cy.toFixed(1),
-          z: +(zoneElev + (l - 1) * (t.h || 0)).toFixed(1),
+          z: +(zoneElev + levelBaseZ(levelHeights, l - 1)).toFixed(1),
         });
       }
     }
