@@ -21,7 +21,8 @@ test('a layout without schemaVersion is treated as v1', () => {
 
 test('migrate lifts v1 to the current schema version', () => {
   const up = migrate(legacyV1);
-  assert.equal(up.schemaVersion, SCHEMA_VERSION);
+  // v5 db_connect format: version lives in editor.schemaVersion, not top-level
+  assert.equal(up.editor.schemaVersion, SCHEMA_VERSION);
 });
 
 test('migrate moves meta.version out of meta', () => {
