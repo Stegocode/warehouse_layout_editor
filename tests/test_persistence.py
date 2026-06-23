@@ -78,7 +78,7 @@ def test_save_validates_serializes_and_upserts():
     assert "ON CONFLICT (name)" in sql
     name, version, payload = params
     assert name == "OUTLET WAREHOUSE"
-    assert version == layout["schemaVersion"]
+    assert version == layout["editor"]["schemaVersion"]
     assert json.loads(payload) == layout  # JSON round-trips
     assert conn.commits == 1
 

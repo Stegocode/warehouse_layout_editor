@@ -10,6 +10,7 @@
 //   - Add a new entry here whenever you bump SCHEMA_VERSION in schema.js.
 
 import { SCHEMA_VERSION } from './schema.js';
+import { expandBins, edgeLength, zoneOf } from './geometry.js';
 
 // version N  ->  function that produces version N+1
 const MIGRATIONS = {
@@ -68,11 +69,107 @@ const MIGRATIONS = {
     });
     return { ...layout, schemaVersion: 4, naming, binOverrides, racks };
   },
+
+  // 4 -> 5: adopt db_connect as the native save format (Step 4).
+  // Restructures the editor-native v4 layout into the db_connect JSON shape:
+  //   - naming/binOverrides/schemaVersion move into an `editor` extension block
+  //   - rack `dir` translates to `orientation` (length_along_x/y); editor-only
+  //     rack fields (levelHeights, rowToken, bayStart, bayReverse) stay on racks
+  //   - meta gains coordinate_system and bin_label_format declarations
+  //   - empty pass-through sections seeded if absent (categories, vehicles, etc.)
+  //   - bins array generated (3-part HomeSource whse_location, zone dropped from label)
+  //   - nodes enriched with zone (derived) and emergency_exit default
+  //   - edges enriched with distance_m (always >= 0)
+  // Existing layouts migrate cleanly and render identically after round-trip.
+  4: (v4) => {
+    const DIR_TO_ORIENTATION = { E: 'length_along_x', N: 'length_along_y' };
+
+    const COORDINATE_SYSTEM = {
+      units: 'metres',
+      origin: {
+        description: 'Receiving station. All coordinates are signed relative to this point.',
+        physical_marker: 'Set by site survey',
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      x_axis: 'East is positive. West into warehouse = negative X.',
+      y_axis: 'North is positive. Into warehouse interior = positive Y.',
+      z_axis: 'Up is positive. Floor slab = 0.',
+    };
+
+    const BIN_LABEL_FORMAT = {
+      field_name: 'whse_location',
+      pattern: '{row}-{bay:02d}-{level}',
+      note: 'HomeSource 3-part join key: row token, 2-digit bay, level. Zone is carried as a separate field on each bin record and does not appear in the label string. Intentionally diverges from db_connect sample (4-part zone-prefixed pattern) to match the WMS join-key format.',
+    };
+
+    // Generate bins from v4 state (racks still have dir) BEFORE translation.
+    const rawBins = expandBins(v4);
+    const bins = rawBins.map(({ bin_label, override_key, ...b }) => {
+      void bin_label;
+      void override_key;
+      return b;
+    });
+
+    const racks = (v4.racks || []).map(({ dir, ...r }) => ({
+      ...r,
+      orientation: DIR_TO_ORIENTATION[dir] ?? 'length_along_y',
+      access_face: r.access_face ?? null,
+      back_to_back_spine: r.back_to_back_spine ?? null,
+    }));
+
+    const nodes = (v4.nodes || []).map((n) => {
+      const z = zoneOf(v4.zones || [], n.x, n.y);
+      return {
+        ...n,
+        zone: n.zone ?? (z ? z.id : null),
+        emergency_exit: n.emergency_exit ?? false,
+      };
+    });
+
+    const edges = (v4.edges || []).map((e) => ({
+      ...e,
+      distance_m: edgeLength(v4.nodes || [], e),
+    }));
+
+    const { coordinate_system, bin_label_format, ...metaRest } = v4.meta ?? {};
+    const meta = {
+      ...metaRest,
+      schema_version: 2,
+      coordinate_system: coordinate_system ?? COORDINATE_SYSTEM,
+      bin_label_format: bin_label_format ?? BIN_LABEL_FORMAT,
+    };
+
+    return {
+      meta,
+      settings: { ...(v4.settings ?? {}), units: 'metres' },
+      categories: v4.categories ?? {},
+      binTypes: v4.binTypes ?? {},
+      vehicles: v4.vehicles ?? {},
+      dwell_times: v4.dwell_times ?? {},
+      zones: v4.zones ?? [],
+      nodes,
+      edges,
+      racks,
+      bg: v4.bg ?? null,
+      bins,
+      editor: {
+        schemaVersion: 5,
+        naming: v4.naming ?? { separator: '-', bayPad: 2 },
+        binOverrides: v4.binOverrides ?? {},
+      },
+    };
+  },
 };
 
 // A layout with no explicit schemaVersion predates the field; treat it as v1.
+// v5 db_connect files carry the version inside the `editor` block; check that
+// first so a stale top-level `schemaVersion` from an older format does not win.
 export function detectVersion(layout) {
-  return Number.isInteger(layout?.schemaVersion) ? layout.schemaVersion : 1;
+  if (Number.isInteger(layout?.editor?.schemaVersion)) return layout.editor.schemaVersion;
+  if (Number.isInteger(layout?.schemaVersion)) return layout.schemaVersion;
+  return 1;
 }
 
 export function migrate(layout) {

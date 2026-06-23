@@ -1,0 +1,222 @@
+{
+  "meta": {
+    "schema_version": 2,
+    "name": "FIXTURE WAREHOUSE",
+    "description": "Minimal db_connect fixture covering all pass-through fields.",
+    "coordinate_system": {
+      "units": "metres",
+      "origin": {
+        "description": "Receiving station.",
+        "physical_marker": "South dock corner",
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "x_axis": "East is positive.",
+      "y_axis": "North is positive.",
+      "z_axis": "Up is positive."
+    },
+    "bin_label_format": {
+      "field_name": "whse_location",
+      "pattern": "{row}-{bay:02d}-{level}",
+      "note": "3-part HomeSource key"
+    },
+    "node_kinds": {
+      "access_point": "Entry/exit of a zone or the building.",
+      "waypoint": "Routing junction with no physical significance.",
+      "staging_area": "Temporary holding area for goods.",
+      "reference_marker": "Fixed point used for survey alignment."
+    },
+    "rack_orientation_key": {
+      "length_along_x": "Rack spine runs East-West; bays step East.",
+      "length_along_y": "Rack spine runs North-South; bays step North."
+    },
+    "location": {
+      "city": "Springfield",
+      "country": "US"
+    },
+    "bin_status": {
+      "AVAILABLE": "Slot is empty and available.",
+      "OCCUPIED": "Slot holds stock.",
+      "RESERVED": "Slot is allocated but not yet filled."
+    }
+  },
+  "settings": {
+    "snap": 0.5,
+    "grid": 0.5,
+    "units": "metres"
+  },
+  "categories": {
+    "APPLIANCES": ["Refrigerators", "Dishwashers", "Washing Machines"],
+    "ELECTRONICS": ["Televisions", "Laptops"]
+  },
+  "binTypes": {
+    "STD": {
+      "w": 3,
+      "d": 1,
+      "h": 6,
+      "color": "#6f93c4",
+      "description": "Standard pallet rack bay.",
+      "dimensions_note": "Width is aisle-to-aisle spacing.",
+      "allowed_categories": ["APPLIANCES"],
+      "max_weight_kg": 500
+    }
+  },
+  "vehicles": {
+    "FORKLIFT": {
+      "label": "Counterbalance Forklift",
+      "aisle_width_m": 3.5,
+      "max_lift_m": 8,
+      "max_load_kg": 2500
+    }
+  },
+  "dwell_times": {
+    "by_level": { "1": 60, "2": 90, "3": 120 },
+    "staging_area_seconds": 300,
+    "dock_load_unload_seconds": 600
+  },
+  "zones": [
+    {
+      "id": "MAIN",
+      "x": 0,
+      "y": 0,
+      "w": 50,
+      "d": 40,
+      "elev": 0,
+      "clearH": 10,
+      "color": "#55657d",
+      "operations": {
+        "forklift_permitted": true,
+        "customer_accessible": false,
+        "operating_hours": "06:00-22:00",
+        "restocking_window": "02:00-05:00",
+        "safety_note": "High-visibility vests required."
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "DOCK_NORTH",
+      "kind": "access_point",
+      "x": 25,
+      "y": 0,
+      "zone": "MAIN",
+      "emergency_exit": true,
+      "description": "North dock door"
+    },
+    {
+      "id": "WPT_A",
+      "kind": "waypoint",
+      "x": 25,
+      "y": 20,
+      "zone": "MAIN",
+      "emergency_exit": false
+    }
+  ],
+  "edges": [
+    {
+      "a": "DOCK_NORTH",
+      "b": "WPT_A",
+      "ramp": false,
+      "distance_m": 20.0,
+      "traffic_class": "shared",
+      "width_m": 4.0,
+      "direction": "bidirectional",
+      "speed_limit_mps": 1.5,
+      "vertical_clearance_m": 10.0,
+      "surface": "concrete_sealed"
+    }
+  ],
+  "racks": [
+    {
+      "id": "ROW-A",
+      "type": "STD",
+      "bays": 3,
+      "levels": 2,
+      "x": 5,
+      "y": 10,
+      "orientation": "length_along_y",
+      "access_face": "east",
+      "access_face_note": "Reach truck access from east aisle.",
+      "back_to_back_spine": null,
+      "levelHeights": [6, 8],
+      "rowToken": "A",
+      "bayStart": 1,
+      "bayReverse": false
+    }
+  ],
+  "bg": null,
+  "bins": [
+    {
+      "zone": "MAIN",
+      "row": "ROW-A",
+      "bay": 1,
+      "level": 1,
+      "bin_type": "STD",
+      "x": 5.5,
+      "y": 11.5,
+      "z": 0,
+      "whse_location": "A-01-1"
+    },
+    {
+      "zone": "MAIN",
+      "row": "ROW-A",
+      "bay": 1,
+      "level": 2,
+      "bin_type": "STD",
+      "x": 5.5,
+      "y": 11.5,
+      "z": 6,
+      "whse_location": "A-01-2"
+    },
+    {
+      "zone": "MAIN",
+      "row": "ROW-A",
+      "bay": 2,
+      "level": 1,
+      "bin_type": "STD",
+      "x": 5.5,
+      "y": 14.5,
+      "z": 0,
+      "whse_location": "A-02-1"
+    },
+    {
+      "zone": "MAIN",
+      "row": "ROW-A",
+      "bay": 2,
+      "level": 2,
+      "bin_type": "STD",
+      "x": 5.5,
+      "y": 14.5,
+      "z": 6,
+      "whse_location": "A-02-2"
+    },
+    {
+      "zone": "MAIN",
+      "row": "ROW-A",
+      "bay": 3,
+      "level": 1,
+      "bin_type": "STD",
+      "x": 5.5,
+      "y": 17.5,
+      "z": 0,
+      "whse_location": "A-03-1"
+    },
+    {
+      "zone": "MAIN",
+      "row": "ROW-A",
+      "bay": 3,
+      "level": 2,
+      "bin_type": "STD",
+      "x": 5.5,
+      "y": 17.5,
+      "z": 6,
+      "whse_location": "A-03-2"
+    }
+  ],
+  "editor": {
+    "schemaVersion": 5,
+    "naming": { "separator": "-", "bayPad": 2 },
+    "binOverrides": {}
+  }
+}

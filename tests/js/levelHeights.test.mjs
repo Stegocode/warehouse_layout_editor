@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { migrate } from '../../app/js/migrations.js';
+import { fromDbConnect } from '../../app/js/dbconnect.js';
 import { validateLayout, SCHEMA_VERSION } from '../../app/js/schema.js';
 import { levelBaseZ } from '../../app/js/geometry.js';
 
@@ -56,7 +57,8 @@ const v2WithFloor = {
 
 test('2→3 migration produces levelHeights with length === levels', () => {
   const up = migrate(v2WithFloor);
-  assert.equal(up.schemaVersion, SCHEMA_VERSION);
+  // v5 db_connect format: version lives in editor block
+  assert.equal(up.editor.schemaVersion, SCHEMA_VERSION);
   assert.equal(up.racks[0].levelHeights.length, 3);
   assert.equal(up.racks[1].levelHeights.length, 1);
 });
@@ -90,19 +92,24 @@ test('2→3 migration skips racks that already have levelHeights', () => {
 
 test('real default_layout.json data (v2 snapshot) migrates to current schema version', () => {
   const up = migrate(defaultV2);
-  assert.equal(up.schemaVersion, SCHEMA_VERSION);
+  // v5 db_connect format: version lives in editor block
+  assert.equal(up.editor.schemaVersion, SCHEMA_VERSION);
   // Each rack seeded with 3 levels of h=6 (STD bin type) by the 2→3 step
   up.racks.forEach((r) => {
     assert.equal(r.levelHeights.length, r.levels);
     assert.ok(r.levelHeights.every((h) => h === 6));
   });
-  const { ok, errors } = validateLayout(up);
+  // Convert to editor-native state before validating
+  const state = fromDbConnect(up);
+  const { ok, errors } = validateLayout(state);
   assert.ok(ok, `Validation failed after migration: ${errors.join('; ')}`);
 });
 
-test('shipped default_layout.json (v3) passes validation as-is', () => {
-  assert.equal(defaultLayout.schemaVersion, SCHEMA_VERSION);
-  const { ok, errors } = validateLayout(defaultLayout);
+test('shipped default_layout.json passes validation after fromDbConnect', () => {
+  // v5 file: version lives in editor block; convert to editor state before validating
+  assert.equal(defaultLayout.editor.schemaVersion, SCHEMA_VERSION);
+  const state = fromDbConnect(defaultLayout);
+  const { ok, errors } = validateLayout(state);
   assert.ok(ok, `default_layout.json is invalid: ${errors.join('; ')}`);
 });
 
@@ -123,7 +130,7 @@ const validV3Rack = {
 };
 
 const validV3 = {
-  schemaVersion: 4,
+  schemaVersion: SCHEMA_VERSION,
   meta: { name: 'TEST' },
   settings: { snap: 1, grid: 1 },
   naming: { separator: '-', bayPad: 2 },

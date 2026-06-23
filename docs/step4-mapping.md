@@ -1,10 +1,24 @@
 # Step 4 — Field Mapping: Editor v4 → db_connect format
 
-Phase 1 deliverable. Describes field-by-field how the editor's internal model maps onto
-db_connect's `sample.json` shape. Implementation (Phase 2) does not begin until this mapping
-is approved.
+Phase 1 deliverable (approved); Phase 2 corrections applied inline.
 
 Reference: `https://github.com/markariosd3/db_connect` — `sample.json`.
+
+## Corrections applied in Phase 2
+
+1. **whse_location format (critical):** The editor emits 3-part HomeSource join keys
+   (`ROW-BAY-LEVEL`, e.g. `"C-01-1"`). The db_connect sample uses 4-part zone-prefixed
+   labels (`"1-C-01-1"`). We deliberately diverge: the 3-part form is the WMS join key;
+   zone is a separate field on each bin record. Documented in `meta.bin_label_format.note`
+   and `DEBT-011`.
+
+2. **coordinate_system.origin wording:** Origin is the **receiving station** only. The phrase
+   "/ southeast dock corner" was removed — that phrase referred to a specific site and was
+   not confirmed as universally identical to the receiving station.
+
+3. **Node kinds:** Editor vocabulary kept; db_connect kinds (`access_point`, `waypoint`,
+   `staging_area`, `reference_marker`) added to the allowed-kinds list so a real db_connect
+   sample imports and validates without translation (DEBT-005). No translation performed.
 
 ---
 
@@ -75,11 +89,10 @@ Reference: `https://github.com/markariosd3/db_connect` — `sample.json`.
 | `charge`    | _(no equivalent)_  | Editor-only; pass through as-is     |
 | _(absent)_  | `reference_marker` | db_connect-only; pass through as-is |
 
-**Proposal:** keep the editor's kind vocabulary for editing — `door/ramp/dock` are operationally
-distinct to a warehouse operator, finer-grained than `access_point`. Emit them as-is in the JSON
-(db_connect's JSONB stores any string value). Add `reference_marker` to the editor's allowed kinds
-so db_connect files validate cleanly on import. No translation in either direction. Full alignment
-deferred to Step 5 (DEBT-005).
+**Implemented:** Editor vocabulary kept as-is. All db_connect kinds (`access_point`, `waypoint`,
+`staging_area`, `reference_marker`) added to the allowed-kinds list in `schema.js` and
+`layout_schema.py`. No translation performed in either direction. Full kind alignment deferred to
+Step 5 (DEBT-005).
 
 ---
 
@@ -163,7 +176,7 @@ The `meta.coordinate_system` block the editor will author on every save:
 "coordinate_system": {
   "units": "metres",
   "origin": {
-    "description": "Receiving station / southeast dock corner. All coordinates are signed relative to this point.",
+    "description": "Receiving station. All coordinates are signed relative to this point.",
     "physical_marker": "Set by site survey",
     "x": 0,
     "y": 0,

@@ -6,9 +6,23 @@
 // lightweight structural check used by import and by the test suite; it is not a
 // full JSON-Schema validator, just enough to catch obviously broken files.
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
-export const NODE_KINDS = ['door', 'ramp', 'junction', 'dock', 'staging', 'charge'];
+// Editor-native kinds (door/ramp/junction/dock/staging/charge) plus db_connect
+// kinds (access_point/waypoint/staging_area/reference_marker) tolerated on
+// import so a real db_connect file validates without translation (DEBT-005).
+export const NODE_KINDS = [
+  'door',
+  'ramp',
+  'junction',
+  'dock',
+  'staging',
+  'charge',
+  'access_point',
+  'waypoint',
+  'staging_area',
+  'reference_marker',
+];
 export const RACK_DIRS = ['E', 'N'];
 
 function isFiniteNumber(v) {

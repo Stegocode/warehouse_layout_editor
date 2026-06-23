@@ -9,8 +9,21 @@ from __future__ import annotations
 
 from numbers import Real
 
-SCHEMA_VERSION = 4
-NODE_KINDS = {"door", "ramp", "junction", "dock", "staging", "charge"}
+SCHEMA_VERSION = 5
+
+# Editor-native kinds plus db_connect kinds tolerated on import (DEBT-005).
+NODE_KINDS = {
+    "door",
+    "ramp",
+    "junction",
+    "dock",
+    "staging",
+    "charge",
+    "access_point",
+    "waypoint",
+    "staging_area",
+    "reference_marker",
+}
 RACK_DIRS = {"E", "N"}
 
 
@@ -114,3 +127,58 @@ def validate_layout(layout) -> list[str]:
             errors.append(f"racks[{i}].type {r.get('type')!r} is not a defined bin type")
 
     return errors
+
+
+_ORIENTATION_TO_DIR = {"length_along_x": "E", "length_along_y": "N"}
+
+
+def from_db_connect(db_layout: dict) -> dict:
+    """Convert a v5 db_connect-format layout dict to editor-native state.
+
+    Mirrors app/js/dbconnect.js fromDbConnect(). Strips derived fields (zone on
+    nodes, distance_m on edges, units from settings). Pass-through fields
+    (zone.operations, edge attributes, rack access_face etc., binType extras)
+    are preserved on their respective objects.
+    """
+    editor = db_layout.get("editor") or {}
+    meta = dict(db_layout.get("meta") or {})
+    meta.pop("schema_version", None)
+
+    racks = []
+    for r in db_layout.get("racks") or []:
+        rack = dict(r)
+        orientation = rack.pop("orientation", None)
+        rack["dir"] = _ORIENTATION_TO_DIR.get(orientation, "N")
+        racks.append(rack)
+
+    edges = []
+    for e in db_layout.get("edges") or []:
+        edge = dict(e)
+        edge.pop("distance_m", None)
+        edges.append(edge)
+
+    nodes = []
+    for n in db_layout.get("nodes") or []:
+        node = dict(n)
+        node.pop("zone", None)
+        nodes.append(node)
+
+    settings = dict(db_layout.get("settings") or {})
+    settings.pop("units", None)
+
+    return {
+        "schemaVersion": editor.get("schemaVersion", SCHEMA_VERSION),
+        "meta": meta,
+        "settings": settings,
+        "naming": editor.get("naming", {"separator": "-", "bayPad": 2}),
+        "binOverrides": editor.get("binOverrides", {}),
+        "categories": db_layout.get("categories") or {},
+        "binTypes": db_layout.get("binTypes") or {},
+        "vehicles": db_layout.get("vehicles") or {},
+        "dwell_times": db_layout.get("dwell_times") or {},
+        "zones": db_layout.get("zones") or [],
+        "nodes": nodes,
+        "edges": edges,
+        "racks": racks,
+        "bg": db_layout.get("bg"),
+    }

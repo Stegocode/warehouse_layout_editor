@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { migrate } from '../../app/js/migrations.js';
+import { fromDbConnect } from '../../app/js/dbconnect.js';
 import { validateLayout, SCHEMA_VERSION } from '../../app/js/schema.js';
 import { expandBins } from '../../app/js/geometry.js';
 
@@ -18,7 +19,7 @@ const FLOOR = { w: 3, d: 6, h: 0, color: '#c4a05f' };
 
 function makeState(rackOverrides = {}, stateOverrides = {}) {
   return {
-    schemaVersion: 4,
+    schemaVersion: SCHEMA_VERSION,
     meta: { name: 'TEST' },
     settings: { snap: 1, grid: 1 },
     naming: { separator: '-', bayPad: 2 },
@@ -181,9 +182,10 @@ const v3Layout = {
   bg: null,
 };
 
-test('3→4 migration seeds rowToken from rack id', () => {
+test('migration from v3 seeds rowToken from rack id', () => {
   const up = migrate(v3Layout);
-  assert.equal(up.schemaVersion, 4);
+  // v5 db_connect format: version lives in editor block
+  assert.equal(up.editor.schemaVersion, SCHEMA_VERSION);
   assert.equal(up.racks[0].rowToken, 'C'); // ROW-C → C
   assert.equal(up.racks[1].rowToken, '12'); // ROW-12 → 12
 });
@@ -196,20 +198,21 @@ test('3→4 migration sets bayStart=1 and bayReverse=false', () => {
   });
 });
 
-test('3→4 migration adds naming defaults', () => {
+test('migration adds naming defaults under editor block', () => {
   const up = migrate(v3Layout);
-  assert.deepEqual(up.naming, { separator: '-', bayPad: 2 });
+  // naming moved to editor.naming in v5 format
+  assert.deepEqual(up.editor.naming, { separator: '-', bayPad: 2 });
 });
 
-test('3→4 migration adds empty binOverrides', () => {
+test('migration adds empty binOverrides under editor block', () => {
   const up = migrate(v3Layout);
-  assert.deepEqual(up.binOverrides, {});
+  assert.deepEqual(up.editor.binOverrides, {});
 });
 
-test('3→4 migration preserves existing binOverrides', () => {
+test('migration preserves existing binOverrides under editor block', () => {
   const withOverrides = { ...v3Layout, binOverrides: { 'ROW-C|0|1': 'KEPT' } };
   const up = migrate(withOverrides);
-  assert.equal(up.binOverrides['ROW-C|0|1'], 'KEPT');
+  assert.equal(up.editor.binOverrides['ROW-C|0|1'], 'KEPT');
 });
 
 test('3→4 migration does not mutate input', () => {
@@ -218,31 +221,34 @@ test('3→4 migration does not mutate input', () => {
   assert.deepEqual(v3Layout, before);
 });
 
-test('migrated v3 default layout labels match pre-migration non-zone parts', () => {
+test('migrated v3 layout labels use 3-part ROW-BAY-LEVEL (no zone)', () => {
   // Pre-migration label was ZONE-ROW-BAY-LEVEL e.g. "1-C-01-1"
   // Post-migration label is ROW-BAY-LEVEL e.g. "C-01-1" (zone dropped intentionally)
-  const v3Default = { ...defaultLayout, schemaVersion: 3 };
-  // Remove v4-only fields to simulate a v3 file
-  const v3sim = JSON.parse(JSON.stringify(v3Default));
-  delete v3sim.naming;
-  delete v3sim.binOverrides;
-  v3sim.racks.forEach((r) => {
-    delete r.rowToken;
-    delete r.bayStart;
-    delete r.bayReverse;
-  });
-  v3sim.schemaVersion = 3;
+  const v3sim = {
+    schemaVersion: 3,
+    meta: { name: 'OUTLET WAREHOUSE' },
+    settings: { snap: 1, grid: 1 },
+    binTypes: { STD: { w: 3, d: 1, h: 6, color: '#6f93c4' } },
+    zones: [],
+    nodes: [],
+    edges: [],
+    racks: [{ id: 'ROW-C', type: 'STD', dir: 'N', bays: 3, levels: 1, levelHeights: [6], x: 0, y: 0 }],
+    bg: null,
+  };
 
   const up = migrate(v3sim);
-  const bins = expandBins(up);
-  // First bin for ROW-C: rowToken=C, bay=1, level=1 → "C-01-1"
+  const state = fromDbConnect(up);
+  const bins = expandBins(state);
+  // First bin: rowToken=C, bay=1 (padded 2 digits → "01"), level=1 → "C-01-1"
   assert.equal(bins[0].bin_label, 'C-01-1');
   // Non-zone parts of old label ("C-01-1") match new label exactly
 });
 
-test('shipped default_layout.json validates at v4', () => {
-  assert.equal(defaultLayout.schemaVersion, SCHEMA_VERSION);
-  const { ok, errors } = validateLayout(defaultLayout);
+test('shipped default_layout.json validates at current schema version', () => {
+  // v5 file: version lives in editor block; convert to editor state before validating
+  assert.equal(defaultLayout.editor.schemaVersion, SCHEMA_VERSION);
+  const state = fromDbConnect(defaultLayout);
+  const { ok, errors } = validateLayout(state);
   assert.ok(ok, `default_layout.json invalid: ${errors.join('; ')}`);
 });
 

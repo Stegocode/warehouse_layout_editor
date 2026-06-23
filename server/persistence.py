@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 
 from server import REPO_ROOT
-from server.layout_schema import validate_layout
+from server.layout_schema import from_db_connect, validate_layout
 
 SCHEMA_FILE = REPO_ROOT / "schema" / "0001_init.sql"
 DEFAULT_LAYOUT_FILE = REPO_ROOT / "app" / "data" / "default_layout.json"
@@ -56,13 +56,17 @@ class LayoutRepository:
         self._conn.commit()
 
     def save(self, name: str, layout: dict) -> None:
-        """Insert or update a layout by name. Validates before writing."""
-        errors = validate_layout(layout)
+        """Insert or update a layout by name. Validates before writing.
+
+        layout must be in the v5 db_connect format. Validation converts to
+        editor-native state first (mirrors how the browser validates on save).
+        """
+        errors = validate_layout(from_db_connect(layout))
         if errors:
             raise ValueError("Refusing to save an invalid layout:\n  - " + "\n  - ".join(errors))
 
         payload = json.dumps(layout)
-        version = int(layout["schemaVersion"])
+        version = int((layout.get("editor") or {}).get("schemaVersion", 0))
         with self._conn.cursor() as cur:
             cur.execute(
                 """
