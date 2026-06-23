@@ -73,8 +73,8 @@ const MIGRATIONS = {
   // 4 -> 5: adopt db_connect as the native save format (Step 4).
   // Restructures the editor-native v4 layout into the db_connect JSON shape:
   //   - naming/binOverrides/schemaVersion move into an `editor` extension block
-  //   - rack `dir` translates to `orientation` (length_along_x/y); editor-only
-  //     rack fields (levelHeights, rowToken, bayStart, bayReverse) stay on racks
+  //   - rack `dir` is KEPT intact (orientation belongs only in the file format,
+  //     written by toDbConnect and read by fromDbConnect — not in working state)
   //   - meta gains coordinate_system and bin_label_format declarations
   //   - empty pass-through sections seeded if absent (categories, vehicles, etc.)
   //   - bins array generated (3-part HomeSource whse_location, zone dropped from label)
@@ -82,8 +82,6 @@ const MIGRATIONS = {
   //   - edges enriched with distance_m (always >= 0)
   // Existing layouts migrate cleanly and render identically after round-trip.
   4: (v4) => {
-    const DIR_TO_ORIENTATION = { E: 'length_along_x', N: 'length_along_y' };
-
     const COORDINATE_SYSTEM = {
       units: 'metres',
       origin: {
@@ -112,9 +110,8 @@ const MIGRATIONS = {
       return b;
     });
 
-    const racks = (v4.racks || []).map(({ dir, ...r }) => ({
+    const racks = (v4.racks || []).map((r) => ({
       ...r,
-      orientation: DIR_TO_ORIENTATION[dir] ?? 'length_along_y',
       access_face: r.access_face ?? null,
       back_to_back_spine: r.back_to_back_spine ?? null,
     }));

@@ -97,6 +97,11 @@ export function toDbConnect(state) {
 // Pass-through sections (categories, vehicles, dwell_times, zone.operations,
 // edge attributes, rack access_face/back_to_back_spine, binType extras) are
 // preserved on their respective objects.
+//
+// Defensive: if a rack already has `dir` (e.g. from the v4→v5 migration which
+// keeps dir intact), that value is preserved. `orientation` is always stripped.
+// Falls back to top-level naming/binOverrides for backward-compat with old
+// editor-native localStorage saves that predate the `editor` block.
 export function fromDbConnect(dbLayout) {
   const editor = dbLayout.editor ?? {};
   const { schema_version: _sv, ...metaRest } = dbLayout.meta ?? {};
@@ -104,7 +109,7 @@ export function fromDbConnect(dbLayout) {
 
   const racks = (dbLayout.racks ?? []).map(({ orientation, ...r }) => ({
     ...r,
-    dir: ORIENTATION_TO_DIR[orientation] ?? 'N',
+    dir: r.dir ?? ORIENTATION_TO_DIR[orientation] ?? 'N',
   }));
 
   const edges = (dbLayout.edges ?? []).map(({ distance_m: _dm, ...e }) => {
@@ -121,11 +126,11 @@ export function fromDbConnect(dbLayout) {
   void _u;
 
   return {
-    schemaVersion: editor.schemaVersion ?? 5,
+    schemaVersion: editor.schemaVersion ?? dbLayout.schemaVersion ?? 5,
     meta: metaRest,
     settings: settingsRest,
-    naming: editor.naming ?? { separator: '-', bayPad: 2 },
-    binOverrides: editor.binOverrides ?? {},
+    naming: editor.naming ?? dbLayout.naming ?? { separator: '-', bayPad: 2 },
+    binOverrides: editor.binOverrides ?? dbLayout.binOverrides ?? {},
     categories: dbLayout.categories ?? {},
     binTypes: dbLayout.binTypes ?? {},
     vehicles: dbLayout.vehicles ?? {},

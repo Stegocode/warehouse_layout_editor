@@ -9,6 +9,7 @@
 // Postgres backend) — see README and docs/postgres.md.
 
 import { migrate } from './migrations.js';
+import { fromDbConnect, toDbConnect } from './dbconnect.js';
 
 export const LS_KEY = 'warehouse_layout_editor_v1';
 const DEFAULT_LAYOUT_URL = 'data/default_layout.json';
@@ -18,7 +19,7 @@ export async function fetchDefaultLayout() {
   if (!res.ok) {
     throw new Error(`Could not load ${DEFAULT_LAYOUT_URL} (HTTP ${res.status})`);
   }
-  return migrate(await res.json());
+  return fromDbConnect(migrate(await res.json()));
 }
 
 // Returns { layout, fromCache }. Throws only if BOTH localStorage and the
@@ -26,7 +27,7 @@ export async function fetchDefaultLayout() {
 export async function loadInitialLayout() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (raw) return { layout: migrate(JSON.parse(raw)), fromCache: true };
+    if (raw) return { layout: fromDbConnect(migrate(JSON.parse(raw))), fromCache: true };
   } catch (err) {
     // Corrupt cache shouldn't be fatal — fall through to the default.
     console.warn('Ignoring unreadable localStorage draft:', err);
@@ -34,10 +35,11 @@ export async function loadInitialLayout() {
   return { layout: await fetchDefaultLayout(), fromCache: false };
 }
 
-// Synchronously write the working draft. Throws on quota errors so the caller
-// can warn the user to export.
-export function saveLayout(layout) {
-  localStorage.setItem(LS_KEY, JSON.stringify(layout));
+// Synchronously write the working draft. Saves in db_connect format so the
+// stored value is always a valid db_connect file (dir on racks is preserved
+// via fromDbConnect when the draft is reloaded). Throws on quota errors.
+export function saveLayout(state) {
+  localStorage.setItem(LS_KEY, JSON.stringify(toDbConnect(state)));
 }
 
 export function clearDraft() {

@@ -88,6 +88,15 @@ Tracked deferrals. Each entry: date introduced, scope, and what unblocks resolut
 - **Unblocks at:** Step 5 or later — add site-survey UI or import from a survey
   tool.
 
+## DEBT-012 — label visibility is session-only, not persisted (Step 4, 2026-06-23)
+
+- **Introduced:** 2026-06-23 (Step 4 fixes)
+- **Current state:** The Labels toggle (toolbar button / `L` key) is a module-level
+  variable in `editor.js` reset to `true` on every page load. It is not stored in
+  the layout state or localStorage.
+- **Unblocks at:** Step 5 or later — add `showLabels` to the layout or a separate
+  UI prefs store if users ask for persistence.
+
 ## DEBT-011 — whse_location format intentionally diverges from db_connect sample (Step 4, 2026-06-23)
 
 - **Introduced:** 2026-06-23 (Step 4)

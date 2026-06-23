@@ -296,3 +296,65 @@ test('migration v4->v5 edge distance_m >= 0 with negative-coordinate nodes', () 
     assert.ok(e.distance_m >= 0, `distance_m was ${e.distance_m}`);
   });
 });
+
+// ── 6. Fix 1 regression: dir preserved through migration and load pipeline ─────
+
+test('migration 4→5 retains dir on racks — no orientation field emitted', () => {
+  const db = migrate(V4_LAYOUT);
+  // dir must survive the migration; orientation must NOT be set by migration
+  assert.equal(db.racks[0].dir, 'N');
+  assert.equal(db.racks[0].orientation, undefined);
+});
+
+test('fromDbConnect: preserves existing dir when orientation absent', () => {
+  // Simulates a rack that came through the migration (which now keeps dir)
+  const migrationOutput = migrate(V4_LAYOUT);
+  const state = fromDbConnect(migrationOutput);
+  assert.equal(state.racks[0].dir, 'N');
+});
+
+test('fromDbConnect: derives dir from orientation when dir absent (real db_connect file)', () => {
+  // Real db_connect files have orientation, not dir — must be translated correctly
+  const dbFile = {
+    meta: { name: 'T' },
+    settings: {},
+    zones: [],
+    nodes: [],
+    edges: [],
+    binTypes: { STD: { w: 3, d: 1, h: 6, color: '#6f93c4' } },
+    racks: [
+      {
+        id: 'ROW-X',
+        type: 'STD',
+        orientation: 'length_along_x',
+        bays: 2,
+        levels: 1,
+        levelHeights: [6],
+        rowToken: 'X',
+        bayStart: 1,
+        bayReverse: false,
+        x: 0,
+        y: 0,
+      },
+    ],
+    bg: null,
+    editor: { schemaVersion: 5, naming: { separator: '-', bayPad: 2 }, binOverrides: {} },
+  };
+  const state = fromDbConnect(dbFile);
+  assert.equal(state.racks[0].dir, 'E');
+  assert.equal(state.racks[0].orientation, undefined);
+});
+
+test('fromDbConnect on default_layout.json: all racks have a defined dir', () => {
+  // After fix, every rack must have dir defined (never undefined).
+  // The file stores orientation; fromDbConnect must translate each to dir.
+  const raw = JSON.parse(
+    readFileSync(fileURLToPath(new URL('../../app/data/default_layout.json', import.meta.url)), 'utf8'),
+  );
+  const state = fromDbConnect(raw);
+  assert.ok(state.racks.length > 0, 'expected at least one rack');
+  state.racks.forEach((r, i) => {
+    assert.ok(r.dir === 'E' || r.dir === 'N', `racks[${i}].dir is "${r.dir}" (expected E or N)`);
+    assert.equal(r.orientation, undefined, `racks[${i}].orientation should be stripped`);
+  });
+});

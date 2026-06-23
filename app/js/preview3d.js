@@ -37,7 +37,7 @@ export function createPreview3D(wrap) {
     return sp;
   }
 
-  function build(state) {
+  function build(state, showLabels = true) {
     teardown();
 
     const scene = new THREE.Scene();
@@ -129,9 +129,11 @@ export function createPreview3D(wrap) {
       wall.position.copy(W(z.x + z.w / 2, z.y + z.d / 2, z.elev + z.clearH / 2));
       scene.add(wall);
 
-      const lb = makeLabel('ZONE ' + z.id, 10, '#eef2f6');
-      lb.position.copy(W(z.x + z.w / 2, z.y + z.d / 2, z.elev + z.clearH + 1.2));
-      scene.add(lb);
+      if (showLabels) {
+        const lb = makeLabel('ZONE ' + z.id, 10, '#eef2f6');
+        lb.position.copy(W(z.x + z.w / 2, z.y + z.d / 2, z.elev + z.clearH + 1.2));
+        scene.add(lb);
+      }
     });
 
     state.racks.forEach((r) => {
@@ -183,9 +185,11 @@ export function createPreview3D(wrap) {
       );
       m.position.copy(W(n.x, n.y, elev + 0.5));
       scene.add(m);
-      const lb = makeLabel(n.id, 5, '#ff9d94');
-      lb.position.copy(W(n.x, n.y, elev + 1.8));
-      scene.add(lb);
+      if (showLabels) {
+        const lb = makeLabel(n.id, 5, '#ff9d94');
+        lb.position.copy(W(n.x, n.y, elev + 1.8));
+        scene.add(lb);
+      }
     });
 
     state.edges.forEach((ed) => {

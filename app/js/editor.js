@@ -2,12 +2,16 @@
 // toolset, and the side-panel UI. Pure layout math lives in geometry.js;
 // persistence lives in store.js; the 3D view lives in preview3d.js.
 
-import { ptSegDist, enrichForExport, expandBins } from './geometry.js';
+import { ptSegDist, expandBins } from './geometry.js';
 import { saveLayout, fetchDefaultLayout } from './store.js';
 import { createPreview3D } from './preview3d.js';
+import { migrate } from './migrations.js';
+import { fromDbConnect, toDbConnect } from './dbconnect.js';
+import { createLabelState } from './labels.js';
 
 let state;
 let preview;
+const labelState = createLabelState();
 
 // DOM refs (resolved in initEditor)
 let cv;
@@ -186,12 +190,14 @@ function draw() {
     const h = zn.d * z;
     ctx.fillRect(x, y, w, h);
     ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = '#eef2f6';
-    ctx.font = `600 ${Math.max(12, z * 4)}px Consolas`;
-    ctx.fillText('ZONE ' + zn.id, x + 8, y + Math.max(16, z * 5));
-    ctx.fillStyle = '#9aa6b3';
-    ctx.font = `${Math.max(10, z * 2.4)}px Consolas`;
-    ctx.fillText(`${zn.w}×${zn.d}  elev ${zn.elev}`, x + 8, y + Math.max(30, z * 8.4));
+    if (labelState.get()) {
+      ctx.fillStyle = '#eef2f6';
+      ctx.font = `600 ${Math.max(12, z * 4)}px Consolas`;
+      ctx.fillText('ZONE ' + zn.id, x + 8, y + Math.max(16, z * 5));
+      ctx.fillStyle = '#9aa6b3';
+      ctx.font = `${Math.max(10, z * 2.4)}px Consolas`;
+      ctx.fillText(`${zn.w}×${zn.d}  elev ${zn.elev}`, x + 8, y + Math.max(30, z * 8.4));
+    }
   });
 
   state.racks.forEach((r) => {
@@ -217,14 +223,16 @@ function draw() {
       ctx.fillRect(sx(bx), sy(by + bd), bw * z, bd * z);
       ctx.strokeRect(sx(bx), sy(by + bd), bw * z, bd * z);
     }
-    ctx.fillStyle = seld ? '#5fa8e8' : '#cfd8e2';
-    ctx.font = `600 ${Math.max(11, z * 2.6)}px Consolas`;
-    const dOff = r.dir === 'E' ? z * (state.binTypes[r.type]?.d || 4) : 0;
-    ctx.fillText(
-      `${r.id} ×${r.bays} L${r.levels} ${r.type}`,
-      sx(r.x),
-      sy(r.y) + Math.max(13, z * 3.2) + dOff + 12,
-    );
+    if (labelState.get()) {
+      ctx.fillStyle = seld ? '#5fa8e8' : '#cfd8e2';
+      ctx.font = `600 ${Math.max(11, z * 2.6)}px Consolas`;
+      const dOff = r.dir === 'E' ? z * (state.binTypes[r.type]?.d || 4) : 0;
+      ctx.fillText(
+        `${r.id} ×${r.bays} L${r.levels} ${r.type}`,
+        sx(r.x),
+        sy(r.y) + Math.max(13, z * 3.2) + dOff + 12,
+      );
+    }
   });
 
   state.edges.forEach((ed) => {
@@ -252,9 +260,11 @@ function draw() {
     ctx.arc(sx(n.x), sy(n.y), Math.max(5, z * 1.0), 0, 7);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#ffb3ab';
-    ctx.font = `${Math.max(10, z * 2.2)}px Consolas`;
-    ctx.fillText(n.id, sx(n.x) + 8, sy(n.y) - 8);
+    if (labelState.get()) {
+      ctx.fillStyle = '#ffb3ab';
+      ctx.font = `${Math.max(10, z * 2.2)}px Consolas`;
+      ctx.fillText(n.id, sx(n.x) + 8, sy(n.y) - 8);
+    }
   });
 
   if (dragDraw) {
@@ -679,7 +689,7 @@ function updateBgInfo() {
 
 // ---------- import / export ----------
 function exportLayout() {
-  const out = enrichForExport(state);
+  const out = toDbConnect(state);
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -697,10 +707,9 @@ async function importLayoutFile(file) {
     alert('Could not parse that file: ' + err.message);
     return;
   }
-  delete data.bins; // derived — regenerate on next export; binOverrides is NOT deleted (user data)
+  delete data.bins; // derived — regenerate on next save; binOverrides is NOT deleted (user data)
   try {
-    const { migrate } = await import('./migrations.js');
-    data = migrate(data);
+    data = fromDbConnect(migrate(data));
   } catch (err) {
     alert('Could not load that layout: ' + err.message);
     return;
@@ -725,11 +734,20 @@ function setMode3d(on) {
   document.getElementById('view3d').classList.toggle('active', on);
   document.getElementById('view2d').classList.toggle('active', !on);
   if (on) {
-    preview.build(state);
+    preview.build(state, labelState.get());
   } else {
     preview.teardown();
     draw();
   }
+}
+
+// ---------- label toggle ----------
+function toggleLabels() {
+  labelState.toggle();
+  const btn = document.getElementById('toggleLabels');
+  if (btn) btn.classList.toggle('active', labelState.get());
+  if (mode3d) preview.build(state, labelState.get());
+  draw();
 }
 
 // ---------- pointer / keyboard wiring ----------
@@ -945,6 +963,7 @@ function wireKeyboard() {
     if (k === 'n') setTool('node');
     if (k === 'e') setTool('edge');
     if (k === 'x') setTool('delete');
+    if (k === 'l') toggleLabels();
     if (k === 'escape') {
       pendingEdgeNode = null;
       dragDraw = null;
@@ -1028,6 +1047,7 @@ function wirePanels() {
 
   document.getElementById('view2d').onclick = () => setMode3d(false);
   document.getElementById('view3d').onclick = () => setMode3d(true);
+  document.getElementById('toggleLabels').onclick = toggleLabels;
   document.getElementById('exportBtn').onclick = exportLayout;
   document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
   document.getElementById('importFile').onchange = (e) => {
