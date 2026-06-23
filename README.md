@@ -74,18 +74,33 @@ There are two kinds of "data," and they're separate on purpose:
 
 2. **A working layout you're editing** — lives in the browser and in exported
    JSON files. Use **Export JSON** to save one to disk and **Import JSON** to
-   load it back. Exported files include extra derived fields (each node's zone,
-   each edge's length, and a fully expanded per-bin list) for downstream use.
+   load it back.
 
-> The data format is **JSON**, not CSV — the layout is nested (settings, bin
-> types, an embedded background image), which doesn't fit a flat table.
+### Save format (db_connect-native)
+
+Exported files use the **db_connect shape**, which feeds directly into the WMS
+pipeline. Top-level keys: `meta` (with `coordinate_system` and
+`bin_label_format`), `settings`, `categories`, `binTypes`, `vehicles`,
+`dwell_times`, `zones`, `nodes`, `edges`, `racks`, `bins`, and an `editor`
+extension block (`schemaVersion`, `naming`, `binOverrides`).
+
+`bins` are **generated on every save** — not stored on rack objects. Each bin
+carries a `whse_location`: the 3-part HomeSource join key `ROW-BAY-LEVEL`
+(e.g. `C-01-1`). Zone is a separate field on the bin record and does not appear
+in the label string. (db_connect's sample uses a 4-part zone-prefixed form;
+the 3-part form matches the WMS join-key format.)
+
+See **[docs/step4-mapping.md](docs/step4-mapping.md)** for the full field-by-field
+mapping between the editor's internal model and the db_connect file format.
 
 ### Schema versioning
 
-Every layout carries a top-level `schemaVersion`. When the format changes, bump
-`SCHEMA_VERSION` in `app/js/schema.js` and add a migration in
-`app/js/migrations.js` that upgrades the previous version. Old drafts and
-imported files are migrated automatically on load, so existing data keeps working.
+Layout files carry a version in `editor.schemaVersion`. When the format changes,
+bump `SCHEMA_VERSION` in `app/js/schema.js` and add a migration in
+`app/js/migrations.js`. Old drafts and imported files are migrated automatically
+on load. The translator pair (`toDbConnect` / `fromDbConnect` in
+`app/js/dbconnect.js`) handles conversion between the editor's internal state and
+the on-disk format.
 
 ---
 
@@ -119,7 +134,8 @@ warehouse-layout-editor/
 │   │   ├── store.js          # localStorage draft + default fetch
 │   │   ├── migrations.js     # schema migrations
 │   │   ├── schema.js         # schema version + validator
-│   │   └── geometry.js       # pure layout math + export enrichment
+│   │   ├── geometry.js       # pure layout math + bin expansion
+│   │   └── dbconnect.js      # toDbConnect / fromDbConnect (db_connect format)
 │   └── vendor/three.module.js
 ├── server/                   # Python: dev server + Postgres layer
 │   ├── dev_server.py         # python -m server.dev_server
