@@ -161,6 +161,101 @@ test('resolveBayLabel matches expandBins level-1 prefix for every bay', () => {
   }
 });
 
+// ── expandBins: bayLevelOverrides ────────────────────────────────────────────
+
+const BLO_BASE_STATE = {
+  naming: { separator: '-', bayPad: 2 },
+  binOverrides: {},
+  binTypes: { STD: { w: 3, d: 1, h: 6, color: '#aaa' } },
+  zones: [],
+};
+
+test('expandBins: override bay produces more levels than row default', () => {
+  const state = {
+    ...BLO_BASE_STATE,
+    racks: [
+      {
+        id: 'ROW-A',
+        type: 'STD',
+        dir: 'N',
+        bays: 3,
+        levels: 2,
+        levelHeights: [6, 8],
+        rowToken: 'A',
+        bayStart: 1,
+        bayReverse: false,
+        x: 0,
+        y: 0,
+        bayLevelOverrides: { 1: { levels: 3, levelHeights: [4, 4, 4] } },
+      },
+    ],
+  };
+  const bins = expandBins(state);
+  // bay index 0 (bayNum 1): row default → 2 levels
+  // bay index 1 (bayNum 2): override    → 3 levels
+  // bay index 2 (bayNum 3): row default → 2 levels
+  assert.equal(bins.filter((b) => b.bay === 1).length, 2);
+  assert.equal(bins.filter((b) => b.bay === 2).length, 3);
+  assert.equal(bins.filter((b) => b.bay === 3).length, 2);
+});
+
+test('expandBins: override bay uses override levelHeights for z', () => {
+  const state = {
+    ...BLO_BASE_STATE,
+    racks: [
+      {
+        id: 'ROW-A',
+        type: 'STD',
+        dir: 'N',
+        bays: 2,
+        levels: 2,
+        levelHeights: [6, 8],
+        rowToken: 'A',
+        bayStart: 1,
+        bayReverse: false,
+        x: 0,
+        y: 0,
+        bayLevelOverrides: { 0: { levels: 2, levelHeights: [3, 3] } },
+      },
+    ],
+  };
+  const bins = expandBins(state);
+  // bay index 0 (bayNum 1): heights [3,3] → level 1 z=0, level 2 z=3
+  // bay index 1 (bayNum 2): heights [6,8] → level 1 z=0, level 2 z=6
+  const b1l1 = bins.find((b) => b.bay === 1 && b.level === 1);
+  const b1l2 = bins.find((b) => b.bay === 1 && b.level === 2);
+  const b2l2 = bins.find((b) => b.bay === 2 && b.level === 2);
+  assert.equal(b1l1.z, 0);
+  assert.equal(b1l2.z, 3);
+  assert.equal(b2l2.z, 6);
+});
+
+test('expandBins: rack without bayLevelOverrides renders identically to pre-v6 behaviour', () => {
+  const state = {
+    ...BLO_BASE_STATE,
+    racks: [
+      {
+        id: 'ROW-A',
+        type: 'STD',
+        dir: 'N',
+        bays: 2,
+        levels: 2,
+        levelHeights: [6, 8],
+        rowToken: 'A',
+        bayStart: 1,
+        bayReverse: false,
+        x: 0,
+        y: 0,
+      },
+    ],
+  };
+  const stateWithEmpty = {
+    ...BLO_BASE_STATE,
+    racks: [{ ...state.racks[0], bayLevelOverrides: {} }],
+  };
+  assert.deepEqual(expandBins(state), expandBins(stateWithEmpty));
+});
+
 test('enrichForExport adds zone, distance and bins without mutating state', () => {
   const state = JSON.parse(JSON.stringify(defaultState));
   state.nodes = [

@@ -45,15 +45,18 @@ export function expandBins(state) {
     const rowToken = r.rowToken ?? r.id.replace(/^[^-]+-/, '');
     const bayStart = Number.isInteger(r.bayStart) && r.bayStart >= 1 ? r.bayStart : 1;
     const bayReverse = r.bayReverse === true;
-    const levelHeights = Array.isArray(r.levelHeights)
+    const rowLevelHeights = Array.isArray(r.levelHeights)
       ? r.levelHeights
       : Array.from({ length: Math.max(r.levels, 1) }, () => t.h || 0.12);
     for (let b = 0; b < r.bays; b++) {
+      const blo = r.bayLevelOverrides?.[b];
+      const effectiveLevels = blo?.levels ?? Math.max(r.levels, 1);
+      const effectiveLevelHeights = blo?.levelHeights ?? rowLevelHeights;
       const cx = r.x + (r.dir === 'E' ? b * t.w + t.w / 2 : t.d / 2);
       const cy = r.y + (r.dir === 'N' ? b * t.w + t.w / 2 : t.d / 2);
       const bayNum = bayReverse ? bayStart + r.bays - 1 - b : bayStart + b;
       const bayStr = String(bayNum).padStart(bayPad, '0');
-      for (let l = 1; l <= Math.max(r.levels, 1); l++) {
+      for (let l = 1; l <= effectiveLevels; l++) {
         const overrideKey = `${r.id}|${b}|${l}`;
         const generated = `${rowToken}${sep}${bayStr}${sep}${l}`;
         const whse_location = overrides[overrideKey] ?? generated;
@@ -68,7 +71,7 @@ export function expandBins(state) {
           bin_type: r.type,
           x: +cx.toFixed(1),
           y: +cy.toFixed(1),
-          z: +(zoneElev + levelBaseZ(levelHeights, l - 1)).toFixed(1),
+          z: +(zoneElev + levelBaseZ(effectiveLevelHeights, l - 1)).toFixed(1),
         });
       }
     }

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from numbers import Real
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # Editor-native kinds plus db_connect kinds tolerated on import (DEBT-005).
 NODE_KINDS = {
@@ -125,6 +125,34 @@ def validate_layout(layout) -> list[str]:
             errors.append(f"racks[{i}].bayReverse must be a boolean")
         if r.get("type") not in bin_type_names:
             errors.append(f"racks[{i}].type {r.get('type')!r} is not a defined bin type")
+        blo = r.get("bayLevelOverrides")
+        if blo is not None:
+            if not isinstance(blo, dict):
+                errors.append(f"racks[{i}].bayLevelOverrides must be an object")
+            else:
+                for bay_key, ov in blo.items():
+                    if not isinstance(ov, dict):
+                        errors.append(f"racks[{i}].bayLevelOverrides[{bay_key}] must be an object")
+                        continue
+                    ov_levels = ov.get("levels")
+                    if not isinstance(ov_levels, int) or isinstance(ov_levels, bool) or ov_levels < 1:
+                        errors.append(
+                            f"racks[{i}].bayLevelOverrides[{bay_key}].levels must be a positive integer"
+                        )
+                    ov_heights = ov.get("levelHeights")
+                    if not isinstance(ov_heights, list):
+                        errors.append(
+                            f"racks[{i}].bayLevelOverrides[{bay_key}].levelHeights must be an array"
+                        )
+                    else:
+                        if isinstance(ov_levels, int) and len(ov_heights) != ov_levels:
+                            errors.append(
+                                f"racks[{i}].bayLevelOverrides[{bay_key}].levelHeights.length must equal levels"
+                            )
+                        if not all(_is_number(h) and h > 0 for h in ov_heights):
+                            errors.append(
+                                f"racks[{i}].bayLevelOverrides[{bay_key}].levelHeights must contain only positive numbers"
+                            )
 
     return errors
 
@@ -133,12 +161,12 @@ _ORIENTATION_TO_DIR = {"length_along_x": "E", "length_along_y": "N"}
 
 
 def from_db_connect(db_layout: dict) -> dict:
-    """Convert a v5 db_connect-format layout dict to editor-native state.
+    """Convert a db_connect-format layout dict to editor-native state.
 
     Mirrors app/js/dbconnect.js fromDbConnect(). Strips derived fields (zone on
     nodes, distance_m on edges, units from settings). Pass-through fields
-    (zone.operations, edge attributes, rack access_face etc., binType extras)
-    are preserved on their respective objects.
+    (zone.operations, edge attributes, rack access_face, bayLevelOverrides etc.,
+    binType extras) are preserved on their respective objects.
     """
     editor = db_layout.get("editor") or {}
     meta = dict(db_layout.get("meta") or {})

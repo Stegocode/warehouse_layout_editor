@@ -1,5 +1,5 @@
 // dbconnect.js — serialization between editor-native state and the db_connect
-// on-disk format (v5).
+// on-disk format.
 //
 // Editor state uses:  dir / naming / binOverrides at top level
 // File format uses:   orientation / editor.naming / editor.binOverrides
@@ -36,11 +36,10 @@ const DEFAULT_BIN_LABEL_FORMAT = {
 // Convert editor-native state to the db_connect file format (v5).
 // Generates the bins array. Pass-through sections are written back unchanged.
 export function toDbConnect(state) {
-  const { schemaVersion: _sv, naming, binOverrides, categories, vehicles, dwell_times, ...rest } = state;
-  void _sv;
+  const { schemaVersion, naming, binOverrides, categories, vehicles, dwell_times, ...rest } = state;
 
   const editor = {
-    schemaVersion: 5,
+    schemaVersion,
     naming: naming ?? { separator: '-', bayPad: 2 },
     binOverrides: binOverrides ?? {},
   };

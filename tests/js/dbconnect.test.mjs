@@ -43,10 +43,10 @@ const V4_LAYOUT = {
   bg: null,
 };
 
-// Minimal editor-native state (v5 schemaVersion) for toDbConnect / fromDbConnect tests.
+// Minimal editor-native state for toDbConnect / fromDbConnect tests.
 function makeEditorState(overrides = {}) {
   return {
-    schemaVersion: 5,
+    schemaVersion: SCHEMA_VERSION,
     meta: { name: 'TEST' },
     settings: { snap: 1, grid: 1 },
     naming: { separator: '-', bayPad: 2 },
@@ -212,9 +212,9 @@ test('dir N -> orientation length_along_y -> dir N (no flip)', () => {
   assert.equal(back.racks[0].dir, 'N');
 });
 
-// ── 4. Migration v4 -> v5 validates and renders identically ──────────────────
+// ── 4. Migration v4 -> v6 validates and renders identically ──────────────────
 
-test('migrate v4 layout produces valid v5 editor state', () => {
+test('migrate v4 layout produces valid v6 editor state', () => {
   const db = migrate(V4_LAYOUT);
   assert.equal(db.editor.schemaVersion, SCHEMA_VERSION);
   const state = fromDbConnect(db);
@@ -222,7 +222,7 @@ test('migrate v4 layout produces valid v5 editor state', () => {
   assert.ok(ok, `Validation failed: ${errors.join('; ')}`);
 });
 
-test('migrate v4 -> v5: rack positions and bin labels are identical to pre-migration', () => {
+test('migrate v4 -> v6: rack positions and bin labels are identical to pre-migration', () => {
   // expandBins on the original v4 layout
   const preBins = expandBins(V4_LAYOUT);
 
@@ -241,7 +241,7 @@ test('migrate v4 -> v5: rack positions and bin labels are identical to pre-migra
   });
 });
 
-test('migrate v4 -> v5: naming and binOverrides survive in editor block', () => {
+test('migrate v4 -> v6: naming and binOverrides survive in editor block', () => {
   const withOverride = {
     ...V4_LAYOUT,
     naming: { separator: '/', bayPad: 3 },
@@ -252,7 +252,7 @@ test('migrate v4 -> v5: naming and binOverrides survive in editor block', () => 
   assert.equal(db.editor.binOverrides['ROW-A|0|1'], 'KEPT');
 });
 
-test('migrate v4 -> v5: coordinate_system is declared with receiving-station origin', () => {
+test('migrate v4 -> v6: coordinate_system is declared with receiving-station origin', () => {
   const db = migrate(V4_LAYOUT);
   const cs = db.meta.coordinate_system;
   assert.ok(cs, 'coordinate_system must be present');
@@ -262,6 +262,42 @@ test('migrate v4 -> v5: coordinate_system is declared with receiving-station ori
   assert.equal(cs.origin.z, 0);
   assert.ok(cs.x_axis.includes('East'));
   assert.ok(cs.y_axis.includes('North'));
+});
+
+// ── 4b. bayLevelOverrides round-trip ─────────────────────────────────────────
+
+test('bayLevelOverrides survives toDbConnect → fromDbConnect round-trip', () => {
+  const state = makeEditorState({
+    racks: [
+      {
+        ...makeEditorState().racks[0],
+        bayLevelOverrides: { 1: { levels: 3, levelHeights: [4, 4, 4] } },
+      },
+    ],
+  });
+  const db = toDbConnect(state);
+  assert.deepEqual(db.racks[0].bayLevelOverrides, { 1: { levels: 3, levelHeights: [4, 4, 4] } });
+  const back = fromDbConnect(db);
+  assert.deepEqual(back.racks[0].bayLevelOverrides, { 1: { levels: 3, levelHeights: [4, 4, 4] } });
+});
+
+test('bayLevelOverrides override bay emits extra bins in toDbConnect output', () => {
+  const state = makeEditorState({
+    racks: [
+      {
+        ...makeEditorState().racks[0],
+        bays: 2,
+        levels: 2,
+        levelHeights: [6, 8],
+        bayLevelOverrides: { 0: { levels: 3, levelHeights: [4, 4, 4] } },
+      },
+    ],
+  });
+  const db = toDbConnect(state);
+  // bay index 0 (bayNum 1): 3 levels, bay index 1 (bayNum 2): 2 levels → total 5
+  assert.equal(db.bins.length, 5);
+  assert.equal(db.bins.filter((b) => b.bay === 1).length, 3);
+  assert.equal(db.bins.filter((b) => b.bay === 2).length, 2);
 });
 
 // ── 5. Distance is always >= 0 even with all-negative coordinates ─────────────
@@ -282,7 +318,7 @@ test('edge distance_m >= 0 when both endpoints have negative coordinates', () =>
   assert.equal(d, +Math.hypot(20, 20).toFixed(1));
 });
 
-test('migration v4->v5 edge distance_m >= 0 with negative-coordinate nodes', () => {
+test('migration v4->v6 edge distance_m >= 0 with negative-coordinate nodes', () => {
   const v4WithNegNodes = {
     ...V4_LAYOUT,
     nodes: [
@@ -298,8 +334,10 @@ test('migration v4->v5 edge distance_m >= 0 with negative-coordinate nodes', () 
 });
 
 // ── 6. Fix 1 regression: dir preserved through migration and load pipeline ─────
+// (tests retained verbatim; "4→5" language now means "4→6" since migration
+//  goes all the way to the current version in one migrate() call)
 
-test('migration 4→5 retains dir on racks — no orientation field emitted', () => {
+test('migration 4→6 retains dir on racks — no orientation field emitted', () => {
   const db = migrate(V4_LAYOUT);
   // dir must survive the migration; orientation must NOT be set by migration
   assert.equal(db.racks[0].dir, 'N');

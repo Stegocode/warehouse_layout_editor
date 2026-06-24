@@ -6,7 +6,7 @@
 // lightweight structural check used by import and by the test suite; it is not a
 // full JSON-Schema validator, just enough to catch obviously broken files.
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 // Editor-native kinds (door/ramp/junction/dock/staging/charge) plus db_connect
 // kinds (access_point/waypoint/staging_area/reference_marker) tolerated on
@@ -112,6 +112,31 @@ export function validateLayout(layout) {
       push(`racks[${i}].bayStart must be a positive integer`);
     if (typeof r.bayReverse !== 'boolean') push(`racks[${i}].bayReverse must be a boolean`);
     if (!binTypeNames.includes(r.type)) push(`racks[${i}].type "${r.type}" is not a defined bin type`);
+    const blo = r.bayLevelOverrides;
+    if (blo != null) {
+      if (typeof blo !== 'object' || Array.isArray(blo)) {
+        push(`racks[${i}].bayLevelOverrides must be an object`);
+      } else {
+        Object.entries(blo).forEach(([bayKey, ov]) => {
+          if (!ov || typeof ov !== 'object') {
+            push(`racks[${i}].bayLevelOverrides[${bayKey}] must be an object`);
+            return;
+          }
+          if (!Number.isInteger(ov.levels) || ov.levels < 1)
+            push(`racks[${i}].bayLevelOverrides[${bayKey}].levels must be a positive integer`);
+          if (!Array.isArray(ov.levelHeights)) {
+            push(`racks[${i}].bayLevelOverrides[${bayKey}].levelHeights must be an array`);
+          } else {
+            if (ov.levelHeights.length !== ov.levels)
+              push(`racks[${i}].bayLevelOverrides[${bayKey}].levelHeights.length must equal levels`);
+            if (!ov.levelHeights.every((h) => isFiniteNumber(h) && h > 0))
+              push(
+                `racks[${i}].bayLevelOverrides[${bayKey}].levelHeights must contain only positive numbers`,
+              );
+          }
+        });
+      }
+    }
   });
 
   return { ok: errors.length === 0, errors };

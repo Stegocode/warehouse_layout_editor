@@ -158,6 +158,27 @@ const MIGRATIONS = {
       },
     };
   },
+
+  // 5 -> 6: per-bay level overrides (bayLevelOverrides).
+  // v5 racks had a single levels + levelHeights for the whole row. v6 adds an
+  // optional bayLevelOverrides map (keyed by 0-based bay index) so individual
+  // bays can differ in level count and heights from the row default.
+  // Migration seeds an empty map on each rack; no rendering change until an
+  // override is actually authored.
+  5: (v5) => {
+    const racks = (v5.racks || []).map((r) => ({
+      ...r,
+      bayLevelOverrides: r.bayLevelOverrides ?? {},
+    }));
+    return {
+      ...v5,
+      racks,
+      editor: {
+        ...(v5.editor ?? {}),
+        schemaVersion: 6,
+      },
+    };
+  },
 };
 
 // A layout with no explicit schemaVersion predates the field; treat it as v1.

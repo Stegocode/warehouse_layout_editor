@@ -123,7 +123,8 @@
       "y": 15,
       "orientation": "length_along_y",
       "access_face": null,
-      "back_to_back_spine": null
+      "back_to_back_spine": null,
+      "bayLevelOverrides": {}
     },
     {
       "id": "ROW-B",
@@ -138,7 +139,8 @@
       "y": 15,
       "orientation": "length_along_y",
       "access_face": null,
-      "back_to_back_spine": null
+      "back_to_back_spine": null,
+      "bayLevelOverrides": {}
     },
     {
       "id": "ROW-A",
@@ -153,7 +155,8 @@
       "y": 15,
       "orientation": "length_along_y",
       "access_face": null,
-      "back_to_back_spine": null
+      "back_to_back_spine": null,
+      "bayLevelOverrides": {}
     },
     {
       "id": "ROW-Z",
@@ -168,7 +171,8 @@
       "y": 15,
       "orientation": "length_along_y",
       "access_face": null,
-      "back_to_back_spine": null
+      "back_to_back_spine": null,
+      "bayLevelOverrides": {}
     },
     {
       "id": "ROW-5",
@@ -183,7 +187,8 @@
       "y": 15,
       "orientation": "length_along_y",
       "access_face": null,
-      "back_to_back_spine": null
+      "back_to_back_spine": null,
+      "bayLevelOverrides": {}
     },
     {
       "id": "ROW-6",
@@ -198,7 +203,8 @@
       "y": 15,
       "orientation": "length_along_y",
       "access_face": null,
-      "back_to_back_spine": null
+      "back_to_back_spine": null,
+      "bayLevelOverrides": {}
     },
     {
       "id": "ROW-8",
@@ -213,7 +219,8 @@
       "y": 13,
       "orientation": "length_along_y",
       "access_face": null,
-      "back_to_back_spine": null
+      "back_to_back_spine": null,
+      "bayLevelOverrides": {}
     },
     {
       "id": "ROW-7",
@@ -228,7 +235,8 @@
       "y": 13,
       "orientation": "length_along_y",
       "access_face": null,
-      "back_to_back_spine": null
+      "back_to_back_spine": null,
+      "bayLevelOverrides": {}
     }
   ],
   "bg": null,
@@ -3667,7 +3675,7 @@
     }
   ],
   "editor": {
-    "schemaVersion": 5,
+    "schemaVersion": 6,
     "naming": {
       "separator": "-",
       "bayPad": 2
