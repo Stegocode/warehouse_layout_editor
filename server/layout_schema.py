@@ -135,9 +135,14 @@ def validate_layout(layout) -> list[str]:
                         errors.append(f"racks[{i}].bayLevelOverrides[{bay_key}] must be an object")
                         continue
                     ov_levels = ov.get("levels")
-                    if not isinstance(ov_levels, int) or isinstance(ov_levels, bool) or ov_levels < 1:
+                    if (
+                        not isinstance(ov_levels, int)
+                        or isinstance(ov_levels, bool)
+                        or ov_levels < 1
+                    ):
                         errors.append(
-                            f"racks[{i}].bayLevelOverrides[{bay_key}].levels must be a positive integer"
+                            f"racks[{i}].bayLevelOverrides[{bay_key}].levels "
+                            f"must be a positive integer"
                         )
                     ov_heights = ov.get("levelHeights")
                     if not isinstance(ov_heights, list):
@@ -147,11 +152,13 @@ def validate_layout(layout) -> list[str]:
                     else:
                         if isinstance(ov_levels, int) and len(ov_heights) != ov_levels:
                             errors.append(
-                                f"racks[{i}].bayLevelOverrides[{bay_key}].levelHeights.length must equal levels"
+                                f"racks[{i}].bayLevelOverrides[{bay_key}]"
+                                f".levelHeights.length must equal levels"
                             )
                         if not all(_is_number(h) and h > 0 for h in ov_heights):
                             errors.append(
-                                f"racks[{i}].bayLevelOverrides[{bay_key}].levelHeights must contain only positive numbers"
+                                f"racks[{i}].bayLevelOverrides[{bay_key}]"
+                                f".levelHeights must contain only positive numbers"
                             )
 
     return errors
