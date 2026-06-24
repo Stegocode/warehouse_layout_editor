@@ -12,14 +12,12 @@ def load_default():
 
 
 def test_default_layout_is_valid():
-    # v5 file: convert to editor-native state before validating
     state = from_db_connect(load_default())
     errors = validate_layout(state)
     assert errors == [], errors
 
 
 def test_default_layout_is_current_schema_version():
-    # v5 format: version lives in editor block
     assert load_default()["editor"]["schemaVersion"] == SCHEMA_VERSION
 
 
@@ -57,3 +55,56 @@ def test_bool_is_not_a_number():
     layout["zones"][0]["x"] = True
     errors = validate_layout(layout)
     assert any("zones[0].x must be a number" in e for e in errors)
+
+
+# ── bayLevelOverrides validation ─────────────────────────────────────────────
+
+
+def _make_state_with_blo(blo):
+    """Return an editor-native state where racks[0] has bayLevelOverrides=blo."""
+    state = from_db_connect(load_default())
+    state["racks"][0]["bayLevelOverrides"] = blo
+    return state
+
+
+def test_bayLevelOverrides_empty_is_valid():
+    errors = validate_layout(_make_state_with_blo({}))
+    assert errors == [], errors
+
+
+def test_bayLevelOverrides_valid_entry_is_accepted():
+    blo = {"0": {"levels": 3, "levelHeights": [4.0, 4.0, 4.0]}}
+    errors = validate_layout(_make_state_with_blo(blo))
+    assert errors == [], errors
+
+
+def test_bayLevelOverrides_rejects_non_object():
+    state = from_db_connect(load_default())
+    state["racks"][0]["bayLevelOverrides"] = [1, 2, 3]
+    errors = validate_layout(state)
+    assert any("bayLevelOverrides must be an object" in e for e in errors)
+
+
+def test_bayLevelOverrides_rejects_levels_zero():
+    blo = {"1": {"levels": 0, "levelHeights": []}}
+    errors = validate_layout(_make_state_with_blo(blo))
+    assert any("levels must be a positive integer" in e for e in errors)
+
+
+def test_bayLevelOverrides_rejects_levelHeights_length_mismatch():
+    blo = {"1": {"levels": 2, "levelHeights": [3.0]}}
+    errors = validate_layout(_make_state_with_blo(blo))
+    assert any("levelHeights.length must equal levels" in e for e in errors)
+
+
+def test_bayLevelOverrides_rejects_non_positive_height():
+    blo = {"0": {"levels": 1, "levelHeights": [0.0]}}
+    errors = validate_layout(_make_state_with_blo(blo))
+    assert any("must contain only positive numbers" in e for e in errors)
+
+
+def test_bayLevelOverrides_survives_from_db_connect_round_trip():
+    layout = copy.deepcopy(load_default())
+    layout["racks"][0]["bayLevelOverrides"] = {"2": {"levels": 1, "levelHeights": [3.5]}}
+    state = from_db_connect(layout)
+    assert state["racks"][0]["bayLevelOverrides"] == {"2": {"levels": 1, "levelHeights": [3.5]}}

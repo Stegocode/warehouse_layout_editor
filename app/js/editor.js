@@ -535,9 +535,11 @@ function renderProps() {
       })
       .join('');
 
+    const selBayBlo = selBay && selBay.rack === o ? (o.bayLevelOverrides || {})[selBay.bayIndex] : null;
+    const selBayLevels = selBayBlo ? selBayBlo.levels : o.levels;
     const bayReadout =
       selBay && selBay.rack === o
-        ? `<div class="hintline bay-readout">Bay: <strong>${resolveBayLabel(state, o, selBay.bayIndex)}</strong>&ensp;&middot;&ensp;${o.levels} level${o.levels !== 1 ? 's' : ''}&ensp;&middot;&ensp;click another bay to update</div>`
+        ? `<div class="hintline bay-readout">Bay: <strong>${resolveBayLabel(state, o, selBay.bayIndex)}</strong>&ensp;&middot;&ensp;${selBayLevels} level${selBayLevels !== 1 ? 's' : ''}${selBayBlo ? ' <em>(override)</em>' : ''}&ensp;&middot;&ensp;click another bay to update</div>`
         : '';
 
     props.innerHTML =
@@ -568,6 +570,30 @@ function renderProps() {
       `<div class="hintline">Bins generate as ROW-BAY-LEVEL at export (whse_location).</div>` +
       `<details><summary>Edit bin labels (${rackBins.length} bins)</summary>` +
       `<div class="binovr-scroll" id="p_binovr">${binovrRows}</div></details>` +
+      (() => {
+        if (!selBay || selBay.rack !== o) return '';
+        const blo = (o.bayLevelOverrides || {})[selBay.bayIndex];
+        const bayLabel = resolveBayLabel(state, o, selBay.bayIndex);
+        const effLevels = blo ? blo.levels : o.levels;
+        const effHeights = blo ? blo.levelHeights : [...o.levelHeights];
+        const heightFields = effHeights
+          .map((h, i) =>
+            f(
+              `Level ${i + 1} height`,
+              `<input type="number" id="p_bov_h_${i}" value="${h}" min="0.01" step="0.1">`,
+            ),
+          )
+          .join('');
+        return (
+          `<details id="p_bay_ov"${blo ? ' open' : ''}>` +
+          `<summary>Override bay ${bayLabel} levels</summary>` +
+          f('Override levels', `<input type="number" id="p_bov_lv" value="${effLevels}" min="1" step="1">`) +
+          heightFields +
+          `<div class="btnrow">` +
+          (blo ? `<button class="btn small" id="p_bov_clear">Remove override</button>` : '') +
+          `</div></details>`
+        );
+      })() +
       `<div class="btnrow"><button class="btn small" id="p_del">Delete row</button></div>`;
 
     bindNum('p_x', 'x', o);
@@ -607,6 +633,56 @@ function renderProps() {
         });
       }
     });
+
+    // Per-bay level override controls
+    if (selBay && selBay.rack === o) {
+      const blo = (o.bayLevelOverrides || {})[selBay.bayIndex];
+      const effHeights = blo ? blo.levelHeights : [...o.levelHeights];
+
+      const bovLvEl = document.getElementById('p_bov_lv');
+      if (bovLvEl) {
+        bovLvEl.addEventListener('input', (e) => {
+          const v = parseInt(e.target.value, 10);
+          if (Number.isNaN(v) || v < 1) return;
+          if (!o.bayLevelOverrides) o.bayLevelOverrides = {};
+          const curBlo = o.bayLevelOverrides[selBay.bayIndex];
+          const curHeights = curBlo ? curBlo.levelHeights : [...o.levelHeights];
+          const defH = curHeights[curHeights.length - 1] ?? o.levelHeights[o.levelHeights.length - 1] ?? 6;
+          const newHeights = Array.from({ length: v }, (_, i) => curHeights[i] ?? defH);
+          o.bayLevelOverrides[selBay.bayIndex] = { levels: v, levelHeights: newHeights };
+          save();
+          renderProps();
+          draw();
+        });
+      }
+
+      effHeights.forEach((_, i) => {
+        const hEl = document.getElementById(`p_bov_h_${i}`);
+        if (hEl) {
+          hEl.addEventListener('input', (e) => {
+            const v = parseFloat(e.target.value);
+            if (Number.isNaN(v) || v <= 0) return;
+            if (!o.bayLevelOverrides) o.bayLevelOverrides = {};
+            if (!o.bayLevelOverrides[selBay.bayIndex]) {
+              o.bayLevelOverrides[selBay.bayIndex] = { levels: o.levels, levelHeights: [...o.levelHeights] };
+            }
+            o.bayLevelOverrides[selBay.bayIndex].levelHeights[i] = v;
+            save();
+            draw();
+          });
+        }
+      });
+
+      const bovClearEl = document.getElementById('p_bov_clear');
+      if (bovClearEl) {
+        bovClearEl.addEventListener('click', () => {
+          if (o.bayLevelOverrides) delete o.bayLevelOverrides[selBay.bayIndex];
+          save();
+          renderProps();
+          draw();
+        });
+      }
+    }
 
     // Bin label overrides — event delegation on the scroll container
     const binovrEl = document.getElementById('p_binovr');
@@ -945,6 +1021,7 @@ function wirePointer() {
         bays,
         levels: 3,
         levelHeights: [defaultLevelH, defaultLevelH, defaultLevelH],
+        bayLevelOverrides: {},
         rowToken: rackId.replace(/^[^-]+-/, ''),
         bayStart: 1,
         bayReverse: false,

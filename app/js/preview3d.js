@@ -144,10 +144,13 @@ export function createPreview3D(wrap) {
       for (let b = 0; b < r.bays; b++) {
         const bx = r.x + (r.dir === 'E' ? b * t.w + t.w / 2 : t.d / 2);
         const by = r.y + (r.dir === 'N' ? b * t.w + t.w / 2 : t.d / 2);
+        const blo = r.bayLevelOverrides?.[b];
         const levelHeights =
-          Array.isArray(r.levelHeights) && r.levelHeights.length > 0
-            ? r.levelHeights
-            : Array.from({ length: Math.max(r.levels, 1) }, () => (t.h > 0 ? t.h : 0.12));
+          blo?.levelHeights?.length > 0
+            ? blo.levelHeights
+            : Array.isArray(r.levelHeights) && r.levelHeights.length > 0
+              ? r.levelHeights
+              : Array.from({ length: Math.max(r.levels, 1) }, () => (t.h > 0 ? t.h : 0.12));
         for (let l = 0; l < levelHeights.length; l++) {
           const lh = levelHeights[l] > 0 ? levelHeights[l] : 0.12;
           const geo = new THREE.BoxGeometry(

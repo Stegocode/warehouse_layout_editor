@@ -140,6 +140,7 @@
       "access_face_note": "Reach truck access from east aisle.",
       "back_to_back_spine": null,
       "levelHeights": [6, 8],
+      "bayLevelOverrides": {},
       "rowToken": "A",
       "bayStart": 1,
       "bayReverse": false
@@ -215,7 +216,7 @@
     }
   ],
   "editor": {
-    "schemaVersion": 5,
+    "schemaVersion": 6,
     "naming": { "separator": "-", "bayPad": 2 },
     "binOverrides": {}
   }
